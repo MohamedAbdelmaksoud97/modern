@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local bootstrap credentials and verification artifacts
+.local/
+.superpowers/
+playwright-report/
+test-results/
+company-reference.html
+!.env.example
+
+/.local/

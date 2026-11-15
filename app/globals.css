@@ -1,26 +1,120 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@custom-variant dark (&:is(.dark *));
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-arabic), var(--font-geist-sans), Arial, sans-serif;
+  --font-heading: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-inverse: var(--inverse);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--card);
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-sidebar-accent: var(--accent);
+  --color-sidebar-accent-foreground: var(--accent-foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--ring);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
+  --radius-4xl: 6px;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #F7F5EF; --foreground: #211F1A;
+  --card: #FFFFFF; --card-foreground: #211F1A;
+  --popover: #FFFFFF; --popover-foreground: #211F1A;
+  --primary: #C1AA70; --primary-foreground: #211F1A;
+  --primary-hover: #B39A5C; --primary-active: #A88E50;
+  --secondary: #ECE9E2; --secondary-foreground: #211F1A;
+  --muted: #ECE9E2; --muted-foreground: #59564E;
+  --accent: #F0E9D6; --accent-foreground: #534321;
+  --border: #D8D2C5; --input: #8F8572; --ring: #6F5B2D;
+  --link: #6F5B2D; --link-hover: #534321;
+  --destructive: #A13232; --destructive-foreground: #FFFFFF;
+  --success: #2F6848; --warning: #785719; --info: #315F7A;
+  --inverse: #211F1A; --inverse-foreground: #F7F5EF;
+  --chart-1: #6F5B2D; --chart-2: #2F6848; --chart-3: #315F7A; --chart-4: #8A4C62; --chart-5: #59564E;
+  --radius: 6px;
 }
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.dark {
+  --background: #171612; --foreground: #F7F5EF;
+  --card: #211F1A; --card-foreground: #F7F5EF;
+  --popover: #2C281F; --popover-foreground: #F7F5EF;
+  --secondary: #2C281F; --secondary-foreground: #F7F5EF;
+  --muted: #2C281F; --muted-foreground: #BEB7A7;
+  --accent: #352B18; --accent-foreground: #E1D2AE;
+  --border: #4B4537; --input: #9D927C; --ring: #C1AA70;
+  --link: #D1BE8D; --link-hover: #E1D2AE;
+  --destructive: #F08E88; --destructive-foreground: #211F1A;
+  --success: #8EC9A2; --warning: #E5C477; --info: #91BBD4;
+  --inverse: #F7F5EF; --inverse-foreground: #211F1A;
+  --chart-1: #C1AA70; --chart-2: #8EC9A2; --chart-3: #91BBD4; --chart-4: #D6A0B4; --chart-5: #BEB7A7;
 }
+@layer base {
+  * { @apply border-border; }
+  html { @apply font-sans; scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground; margin: 0; }
+  button, input, select, textarea { font: inherit; }
+  button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+  ::selection { background: var(--accent); color: var(--accent-foreground); }
+  h1,h2,h3,h4 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+  [dir=rtl] { letter-spacing: 0; }
+}
+[data-slot=button] { min-height: 48px; border-radius: 6px; padding-inline: 20px; gap: 8px; }
+[data-slot=input], [data-slot=select-trigger] { min-height: 48px; border-radius: 9999px; background: var(--card); padding-inline: 16px; }
+[data-slot=select-value] { text-align: start; }
+[data-slot=textarea] { border-radius: 6px; min-height: 112px; padding: 12px 16px; background: var(--card); }
+[data-slot=card] { border-radius: 0; box-shadow: none; }
+[data-slot=dialog-content], [data-slot=sheet-content] { border-radius: 6px; }
+[data-slot=dialog-content] { max-height: calc(100dvh - 32px); overflow-y: auto; }
+[data-slot=table-container] { max-width: 100%; }
+[data-slot=table-head], [data-slot=table-cell] { text-align: start; padding: 16px; }
+[data-slot=switch] { direction: ltr; }
+.page-container { width: min(100% - 32px, 1340px); margin-inline: auto; }
+.workspace-main { min-width: 0; }
+.section-label { color: var(--link); font-size: 12px; font-weight: 500; }
+.data-table-wrap { overflow-x: auto; border: 1px solid var(--border); background: var(--card); }
+.app-panel { min-width: 0; border: 1px solid var(--border); background: var(--card); padding: 24px; overflow-wrap: anywhere; }
+.app-panel h2 { font-size: 19px; font-weight: 500; }
+@media (min-width: 768px) { .page-container { width: min(100% - 48px, 1340px); } }
+@media (min-width: 1024px) { .page-container { width: min(100% - 80px, 1340px); } }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+@media print { .no-print, aside, nav { display: none !important; } .workspace-main { margin: 0 !important; } body { background: white; color: black; } }

@@ -1,0 +1,32 @@
+services:
+  waha:
+    # Set an approved immutable version/digest in deployment/waha.env; no floating default.
+    image: ${WAHA_IMAGE:?Set WAHA_IMAGE to an approved pinned image tag or digest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      WAHA_API_KEY: ${WAHA_API_KEY:?Set a random WAHA_API_KEY}
+      WHATSAPP_DEFAULT_ENGINE: ${WAHA_ENGINE:-WEBJS}
+      WHATSAPP_RESTART_ALL_SESSIONS: "True"
+      WAHA_AUTO_START_DELAY_SECONDS: "15"
+      WAHA_PRINT_QR: "False"
+      WAHA_DASHBOARD_ENABLED: "False"
+      WHATSAPP_SWAGGER_ENABLED: "False"
+      WHATSAPP_DOWNLOAD_MEDIA: "False"
+      WHATSAPP_HOOK_URL: ${WAHA_WEBHOOK_URL:?Set the HTTPS application webhook URL}
+      WHATSAPP_HOOK_EVENTS: "session.status,message.ack"
+      WHATSAPP_HOOK_HMAC_KEY: ${WAHA_WEBHOOK_SECRET:?Set a separate random webhook secret}
+      WHATSAPP_HOOK_RETRIES_POLICY: "exponential"
+      WHATSAPP_HOOK_RETRIES_DELAY_SECONDS: "2"
+      WHATSAPP_HOOK_RETRIES_ATTEMPTS: "15"
+      TZ: "UTC"
+    volumes:
+      - waha-sessions:/app/.sessions
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  waha-sessions:

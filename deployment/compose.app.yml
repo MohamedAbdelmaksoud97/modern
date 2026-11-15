@@ -1,0 +1,36 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - ../.env.local
+    environment:
+      NODE_ENV: production
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - next-cache:/app/.next/cache
+  notifications:
+    image: node:24-alpine
+    restart: unless-stopped
+    user: "1000:1000"
+    working_dir: /worker
+    command: ["node", "notification-worker.mjs"]
+    environment:
+      NOTIFICATION_WORKER_URL: http://app:3000/api/cron/notifications
+      CRON_SECRET: ${CRON_SECRET:-}
+    volumes:
+      - ../scripts/notification-worker.mjs:/worker/notification-worker.mjs:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    read_only: true
+    profiles: ["whatsapp"]
+volumes:
+  next-cache:

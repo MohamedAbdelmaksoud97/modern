@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brand Design System"
+  short_description: "Warm gold design guidance for this project's UI"
+  default_prompt: "Use $brand-design-system to apply the project's design system to this UI."

@@ -1,0 +1,38 @@
+# تشغيل منصة مودرن / Modern deployment
+
+## What is implemented
+
+Arabic-default RTL and English LTR public website, light/dark preferences, private office ERP/CRM, client portal, account issuance/password rotation, assigned-stage workflow, append-only documents/site visits, municipality decisions, contract quotations/percentage allocations/KWD payments, client visibility, public portfolio and consultation CRM. WAHA integration has a durable private-Postgres outbox, manager controls and signed delivery webhooks.
+
+The application uses **custom server sessions over Supabase-hosted Postgres**, not Supabase Auth. Passwords are scrypt hashes. The browser receives an opaque HttpOnly session cookie, never a database credential or WAHA key. The private `modern` schema is excluded from anonymous/publishable-key access; business queries run as `modern_app` with database row policies and a per-transaction actor. The server database connection remains privileged for authentication and migrations; keep its environment isolated. Deploy a Node.js server/container; static export and Edge-only hosts are unsuitable.
+
+## First deployment
+
+1. Use Node.js 24 LTS and a PostgreSQL database reachable over verified TLS. Run `npm ci`. Copy `.env.example` to `.env.local` and set `SUPABASE_DB_URL`. Keep the bundled CA certificate in `certs/supabase-ca.crt`; if your database uses another CA, set `SUPABASE_DB_CA_PEM` to that CA's actual PEM text. TLS verification is never disabled. A pooled Supabase connection is appropriate; size application replicas against the database connection limit (eight connections per app process).
+2. Back up any existing database. Run `npm run db:migrate`. It applies numbered SQL files in `database/`, records applied filenames and creates only the private application schema/internal role. Run migrations as a release job before starting new app instances, one runner at a time. The script is not intended for concurrent migration runners. Do not manually replay early SQL files: later migrations evolve their policies.
+3. On an empty application database, migration issues a manager account in **`.local/bootstrap.json`**. This file is ignored by Git/Docker. Read it locally and deliver it securely to the office manager. Do not publish or copy it into a web root. First login requires changing the issued password; ordinary users are added by the manager/secretary. No fixed public demo credentials exist. Back up or securely archive the bootstrap handoff record after rotation.
+4. Run `npm run build` and `npm run check`. Start with `npm start`. Set `APP_ORIGIN` to the exact public HTTPS origin without a trailing slash. Expose the application through an HTTPS reverse proxy that preserves the public Host and passes the original scheme. Configure the proxy to replace incoming `X-Forwarded-For` with the verified client address for rate limiting. Bind the Node port privately. The `/api/health` endpoint returns only readiness.
+5. Or build Linux containers with `docker compose --env-file .env.local -f deployment/compose.app.yml up -d --build`. The Dockerfile generates the standalone Next.js output on Linux. The app runs as an unprivileged user with a read-only root filesystem and a dedicated cache volume. Place an HTTPS reverse proxy in front of its loopback port and allow request bodies up to 16 MiB for the upload endpoints. Pin the Node base image by digest for your release.
+6. Manager: create staff and clients, assign stages, configure each project's visibility, set quotations and variable stage allocations, and publish actual portfolio images. Clients log in by national ID; staff use office-based email identifiers. Issued passwords must have at least 12 characters and must be changed on first use. Disabling accounts, resetting passwords or changing roles revokes sessions. Email/phone verification is intentionally not required.
+
+## WhatsApp activation
+
+Read [WAHA.md](WAHA.md). Supply a real WAHA URL/API key, session, independent webhook secret and `CRON_SECRET` (32+ random characters), pair the office phone and verify `WORKING`. Review client consent/preferences and templates before enabling global notifications. An authenticated scheduler must call `/api/cron/notifications`; the optional Compose worker starts with `--profile whatsapp`. Avoid running redundant schedulers unnecessarily, though database leases coordinate workers. A private WAHA endpoint must be reachable from the app's network: `127.0.0.1` inside a container refers to that container, so use a private service DNS name or private gateway rather than copying a host-loopback address.
+
+WAHA is **not connected** in the supplied environment. No real WhatsApp message was sent in verification. Offline/error states are displayed accurately. Ambiguous provider responses are retained for review and never blindly resent.
+
+## Files, retention and recovery
+
+Project documents and portfolio raster images are stored as private Postgres bytea, with authenticated view/download endpoints (project files up to15MB, portfolio images5MB). SVG, HTML and unvalidated executables are rejected. This avoids an unconfigured storage service but increases database storage/backup size; size your plan accordingly. CAD files require download permission because the browser cannot preview them. Browser-preview permission cannot prevent a determined viewer from retaining bytes they can see; download permission controls the application's attachment endpoint.
+
+Configure automatic encrypted database backups/PITR appropriate to the office, verify restores into a separate project, and include documents and the WAHA pairing volume in your recovery plan. Restrict access to national IDs, database credentials and pairing backups. Define retention with the office before accepting live records. Audit, financial, document and visit history is append-only. Correct mistakes by adding records/revisions instead of overwriting history.
+
+Monitor `/api/health`, HTTP5xx, database storage/connections, WhatsApp status, uncertain/failed jobs and scheduler freshness. Expired sessions and rate-limit buckets should be pruned during scheduled database maintenance; keep audit/business history according to office policy. Never log secrets or raw login requests.
+
+## Verification and test data
+
+`npm run check` covers TypeScript, ESLint and backend tests; backend DB tests require the configured database and use transactions/isolated, explicitly marked fixture runs. `npm run test:whatsapp` includes local-provider tests; `WHATSAPP_DB_TEST=1` enables the fake-provider database integration. Run the latter during an exclusive notification-settings maintenance window because it snapshots/restores the global test setting. It never calls the real WAHA provider.
+
+Browser verification: create test-only accounts with `npm run test:e2e:fixtures`, build/start the production server on3100, then run Playwright with `PLAYWRIGHT_BASE_URL=http://localhost:3100 npm run test:e2e`. Always finish with `npm run test:e2e:cleanup`. These fixtures use a unique `E2E-` prefix, generated passwords in ignored `.local/e2e.json`, disabled notifications and scoped cleanup. Do not run destructive fixture cleanup during live office activity: it temporarily locks immutable history tables while deleting only the identified test records in a transaction. Test artifacts may include private test data and stay ignored.
+
+Actual live WAHA delivery, target-host deployment, public DNS/TLS and backup restoration require the operator's infrastructure and cannot be certified by local browser tests. The current verification record is [VERIFICATION.md](VERIFICATION.md).

@@ -1,0 +1,14 @@
+BEGIN;
+CREATE OR REPLACE FUNCTION modern.project_balance(pid uuid) RETURNS numeric LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$ SELECT p.contract_value-coalesce((SELECT sum(amount) FROM modern.payments WHERE project_id=p.id),0) FROM modern.projects p WHERE p.id=pid AND modern.can_project(pid) AND (modern.actor_role() IN ('manager','secretary','accountant') OR modern.visible(pid,'balance')) $$;
+REVOKE ALL ON FUNCTION modern.project_balance(uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION modern.project_balance(uuid) TO modern_app;
+DROP POLICY documents_read ON modern.documents;
+CREATE POLICY documents_read ON modern.documents FOR SELECT TO modern_app USING(modern.can_project(project_id) AND (modern.actor_role()<>'client' OR modern.visible(project_id,category)) AND (modern.actor_role()<>'accountant' OR category IN ('receipts','contract','supervision_contract')));
+DROP POLICY reports_read ON modern.reports;
+CREATE POLICY reports_read ON modern.reports FOR SELECT TO modern_app USING(modern.can_project(project_id) AND modern.actor_role()<>'accountant' AND (modern.actor_role()<>'client' OR modern.visible(project_id,'site_reports') OR modern.visible(project_id,'site_notes')));
+DROP POLICY assignments_read ON modern.assignments;
+CREATE POLICY assignments_read ON modern.assignments FOR SELECT TO modern_app USING(modern.can_project(project_id) AND modern.actor_role() NOT IN ('client','accountant'));
+DROP POLICY tasks_read ON modern.tasks;
+CREATE POLICY tasks_read ON modern.tasks FOR SELECT TO modern_app USING(modern.can_project(project_id) AND modern.actor_role()<>'client' AND (modern.actor_role()<>'accountant' OR assigned_to=modern.actor_id()));
+CREATE OR REPLACE FUNCTION modern.can_upload(pid uuid,cat text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$ SELECT EXISTS(SELECT 1 FROM modern.projects p JOIN modern.users u ON u.id=modern.actor_id() AND u.active WHERE p.id=pid AND modern.can_project(pid) AND ((cat='receipts' AND u.role IN ('manager','accountant')) OR (p.stage=CASE cat WHEN 'contract' THEN 0 WHEN 'architecture' THEN 1 WHEN 'civil' THEN 2 WHEN 'drawings_2d' THEN 3 WHEN 'drawings_3d' THEN 3 WHEN 'municipality' THEN 4 WHEN 'municipality_letters' THEN CASE WHEN p.stage=8 THEN 8 ELSE 5 END WHEN 'supervision_contract' THEN 6 WHEN 'site_photos' THEN 7 WHEN 'site_reports' THEN 7 ELSE -1 END AND (u.role IN ('manager','secretary') OR EXISTS(SELECT 1 FROM modern.assignments a WHERE a.project_id=p.id AND a.user_id=u.id AND a.stage=p.stage AND u.role=CASE p.stage WHEN 1 THEN 'architect' WHEN 2 THEN 'civil_engineer' WHEN 3 THEN 'draftsman' WHEN 4 THEN 'municipality_draftsman' WHEN 7 THEN 'site_supervisor' END))))) $$;
+COMMIT;
