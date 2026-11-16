@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type ComponentProps,
 } from "react";
-import { LoaderCircle, CircleAlert, FolderOpen, X } from "lucide-react";
+import { LoaderCircle, CircleAlert, FolderOpen, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,28 @@ import {
   EmptyDescription,
 } from "@/components/ui/empty";
 import type { CommandResult } from "@/lib/types";
+import { cn } from "@/lib/utils";
+export function SearchField({
+  label,
+  className,
+  ...props
+}: ComponentProps<typeof Input> & { label: string }) {
+  const { t } = usePreferences();
+  const generatedId = useId();
+  const id = props.id || generatedId;
+  return (
+    <Field>
+      <FieldLabel htmlFor={id}>{t(label)}</FieldLabel>
+      <div className="relative min-w-0">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        />
+        <Input {...props} id={id} type="search" className={cn("ps-12", className)} />
+      </div>
+    </Field>
+  );
+}
 export function TextField({
   label,
   hint,
@@ -264,7 +286,7 @@ export function FormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="p-6 sm:max-w-xl"
+        className="p-5 sm:max-w-xl sm:p-6"
         dir={locale === "ar" ? "rtl" : "ltr"}
       >
         <DialogClose
@@ -279,7 +301,7 @@ export function FormDialog({
         >
           <X aria-hidden="true" />
         </DialogClose>
-        <DialogHeader className="pb-3 pe-8">
+        <DialogHeader className="pb-3 pe-12">
           <DialogTitle className="text-xl leading-normal">
             {t(title)}
           </DialogTitle>

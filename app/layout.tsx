@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
+import { Geist, Geist_Mono, Tajawal } from "next/font/google";
 import "./globals.css";
 import { PreferencesProvider } from "@/components/platform/preferences";
 
@@ -16,16 +16,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: { default: "مودرن | للاستشارات الهندسية", template: "%s | مودرن" },
   description:
-    "مكتب مودرن للاستشارات الهندسية في الكويت. تصميم معماري، أعمال مدنية، رسومات هندسية وإشراف ميداني. من الفكرة إلى واقع يستحقك.",
+    "مكتب مودرن للاستشارات الهندسية في الكويت. تصميم الواجهات والتصميم المعماري والإنشائي والأنظمة، التراخيص الحكومية والإشراف الهندسي المتكامل.",
   applicationName: "مودرن",
   robots: { index: true, follow: true },
   icons: { icon: "/logo.png" },
 };
 
-const arabic = IBM_Plex_Sans_Arabic({
+const arabic = Tajawal({
   variable: "--font-arabic",
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "700"],
   display: "swap",
 });
 

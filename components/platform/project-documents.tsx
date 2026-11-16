@@ -72,8 +72,9 @@ export function DocumentList({
               </p>
             </div>
           </div>
-          <div className="mt-auto flex gap-2">
+          <div className="mt-auto flex flex-wrap gap-2">
             <Button
+              nativeButton={false}
               variant="outline"
               render={
                 <a
@@ -88,6 +89,7 @@ export function DocumentList({
             </Button>
             {download && (
               <Button
+                nativeButton={false}
                 variant="ghost"
                 size="icon"
                 className="px-0!"

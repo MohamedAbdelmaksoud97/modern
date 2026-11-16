@@ -6,22 +6,21 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("Arabic is the default and the portfolio makes no fabricated project claims", async ({
+test("Arabic landing displays the supplied office content and eleven facades", async ({
   page,
 }) => {
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "كل مساحة تبدأ بفكرة.",
+    "مكتب مودرن للاستشارات الهندسية",
   );
-  await expect(page.getByText("أعمالنا تُضاف هنا قريبًا")).toBeVisible();
-  await expect(page.locator("#work article")).toHaveCount(0);
+  await expect(page.locator("#work article")).toHaveCount(11);
   await expect(
-    page.getByRole("link", { name: "صورة توضيحية من Unsplash" }),
+    page.getByRole("heading", { name: "واجهة مقام", exact: true }),
   ).toBeVisible();
   await expect(
-    page.locator('a[href="https://wa.me/96555563171"]').first(),
+    page.locator('a[href="https://wa.me/96551764654"]').first(),
   ).toBeVisible();
 });
 
@@ -33,7 +32,7 @@ test("language and theme switches update the site and persist", async ({
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Every space begins with an idea.",
+    "Modern Engineering Consultancy",
   );
   await expect(
     page.getByLabel("Project details", { exact: true }),
@@ -44,7 +43,7 @@ test("language and theme switches update the site and persist", async ({
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect(
-    page.getByText("Our project gallery is coming soon"),
+    page.getByRole("heading", { name: "Maqam facade", exact: true }),
   ).toBeVisible();
 });
 
@@ -68,11 +67,14 @@ test("consultation validates fields and sends the entered request", async ({
   await page.getByLabel("رقم الهاتف", { exact: true }).fill("+96555560000");
   await page.getByRole("combobox", { name: "الخدمة المطلوبة" }).click();
   await page
-    .getByRole("option", { name: "التصميم المعماري", exact: true })
+    .getByRole("option", {
+      name: "تصميم الواجهات والتصميم المعماري",
+      exact: true,
+    })
     .click();
   await expect(
     page.getByRole("combobox", { name: "الخدمة المطلوبة" }),
-  ).toContainText("التصميم المعماري");
+  ).toContainText("تصميم الواجهات والتصميم المعماري");
   await page
     .getByLabel("نبذة عن المشروع", { exact: true })
     .fill("استفسار تجريبي عن تصميم منزل ومساحات عائلية.");
@@ -83,7 +85,7 @@ test("consultation validates fields and sends the entered request", async ({
   expect(payload).toMatchObject({
     name: "عميل اختبار",
     phone: "+96555560000",
-    service: "التصميم المعماري",
+    service: "تصميم الواجهات والتصميم المعماري",
     website: "",
   });
 });
@@ -142,7 +144,33 @@ test("published portfolio displays real supplied entries and excludes drafts", a
     }),
   );
   await page.goto("/");
-  await expect(page.locator("#work article")).toHaveCount(1);
+  await expect(page.locator("#work article")).toHaveCount(12);
   await expect(page.getByRole("heading", { name: entry.title })).toBeVisible();
+  await expect(page.locator("#work").getByText(entry.location, { exact: true })).toBeVisible();
   await expect(page.getByText("مشروع مسودة للاختبار")).toHaveCount(0);
+});
+
+test("supplied facade gallery filters by architectural style and survives API outages", async ({
+  page,
+}) => {
+  await page.route("**/api/public", (route) =>
+    route.fulfill({ status: 503, json: { error: "unavailable" } }),
+  );
+  await page.goto("/");
+  await expect(page.locator("#work article")).toHaveCount(11);
+  for (const [name, count] of [
+    ["حديث", 4],
+    ["نيو كلاسيك", 3],
+    ["كلاسيكي وإسلامي", 4],
+    ["جميع الأعمال", 11],
+  ] as const) {
+    await page.getByRole("tab", { name, exact: true }).click();
+    await expect(page.locator("#work article")).toHaveCount(count);
+  }
+  await expect(
+    page.locator('a[href="mailto:MODERNCONKW@GMAIL.COM"]').first(),
+  ).toBeVisible();
+  await expect(
+    page.locator('iframe[title="موقع مكتب مودرن في شرق، الكويت"]'),
+  ).toHaveAttribute("loading", "lazy");
 });

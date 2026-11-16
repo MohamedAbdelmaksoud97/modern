@@ -11,6 +11,8 @@ import {
   DraftingCompass,
   Camera,
   MapPin,
+  MessageCircle,
+  Mail,
   Ruler,
   ShieldCheck,
 } from "lucide-react";
@@ -63,53 +65,65 @@ export default function Home() {
     {
       number: "01",
       icon: DraftingCompass,
-      title: t("التصميم المعماري", "Architectural design"),
+      title: t(
+        "تصميم الواجهات والتصميم المعماري",
+        "Facade & architectural design",
+      ),
       text: t(
-        "مساحات مدروسة تبدأ من احتياجك، وتوازن بين جمال الفكرة وعملية الاستخدام.",
-        "Thoughtful spaces shaped around your needs, balancing the beauty of an idea with everyday function.",
+        "ابتكار واجهات معمارية متوازنة بمختلف الأنماط (الحديث، النيو كلاسيك، الكلاسيكي، والإسلامي) وإعداد المخططات المعمارية المدروسة لتحقيق أفضل استغلال للمساحات.",
+        "Balanced facades in modern, neo-classical, classical and Islamic styles, with thoughtful architectural plans that make the most of every space.",
       ),
       details: t(
-        "المخططات المعمارية · توزيع المساحات",
-        "Architectural plans · Spatial planning",
+        "تصميم الواجهات · المخططات المعمارية",
+        "Facade design · Architectural plans",
       ),
     },
     {
       number: "02",
       icon: Building2,
-      title: t("الأعمال الإنشائية", "Structural engineering"),
+      title: t(
+        "التصميم الإنشائي والأنظمة (MEP)",
+        "Structural design & MEP systems",
+      ),
       text: t(
-        "تكامل هندسي يربط الرؤية المعمارية بالتفاصيل الإنشائية ومتطلبات المشروع.",
-        "Integrated engineering that connects the architectural vision with structural detail and project requirements.",
+        "إعداد المخططات الإنشائية ومخططات الكهرباء والتكييف والصرف الصحي وفق أعلى معايير السلامة وكود البناء الكويتي.",
+        "Structural, electrical, air-conditioning and drainage plans prepared to high safety standards and Kuwait building codes.",
       ),
       details: t(
-        "التصميم الإنشائي · التفاصيل الفنية",
-        "Structural design · Technical details",
+        "إنشائي · كهرباء · تكييف · صرف صحي",
+        "Structure · Electrical · HVAC · Drainage",
       ),
     },
     {
       number: "03",
       icon: Ruler,
-      title: t("الواجهات والمناظير", "Facades & visualization"),
+      title: t(
+        "التراخيص واعتماد الجهات الحكومية",
+        "Permits & government approvals",
+      ),
       text: t(
-        "لغة بصرية متناسقة تمنح المبنى هويته، وتقرّب إليك الصورة قبل التنفيذ.",
-        "A coherent visual language that gives your building its identity and brings it into focus before construction.",
+        "إنجاز ومتابعة كافة معاملات التراخيص الهندسية واعتماد المخططات لدى بلدية الكويت، قوة الإطفاء العام، ووزارات الخدمات.",
+        "Engineering permit applications and plan approvals with Kuwait Municipality, Kuwait Fire Force and service ministries.",
       ),
       details: t(
-        "تصميم الواجهات · مناظير ثلاثية الأبعاد",
-        "Facade design · 3D visualization",
+        "بلدية الكويت · الإطفاء · وزارات الخدمات",
+        "Municipality · Fire Force · Service ministries",
       ),
     },
     {
       number: "04",
       icon: ShieldCheck,
-      title: t("الإشراف والمتابعة", "Supervision & follow-up"),
+      title: t(
+        "الاستشارات الهندسية والإشراف على التنفيذ",
+        "Engineering consultancy & site supervision",
+      ),
       text: t(
-        "متابعة مراحل العمل في الموقع، وتوثيق الزيارات والملاحظات والتقارير الهندسية.",
-        "On-site follow-up with documented visits, observations and engineering reports.",
+        "تقديم الاستشارات الفنية، إعداد جداول الكميات والمواصفات (BOQ)، والإشراف الهندسي الدوري لضمان مطابقة التنفيذ للمخططات المعتمدة.",
+        "Technical advice, bills of quantities and specifications (BOQ), and regular engineering supervision to ensure construction follows approved plans.",
       ),
       details: t(
-        "إشراف ميداني · تقارير ومتابعة",
-        "Site supervision · Reports & follow-up",
+        "استشارات فنية · جداول كميات · إشراف هندسي",
+        "Technical advice · BOQ · Site supervision",
       ),
     },
   ];
@@ -160,12 +174,12 @@ export default function Home() {
             )}
           </p>
           <a
-            href="https://wa.me/96555563171"
+            href="https://wa.me/96551764654"
             target="_blank"
             rel="noreferrer"
             className="hidden items-center gap-2 underline-offset-4 hover:underline sm:flex"
           >
-            <span dir="ltr">+965 5556 3171</span>
+            <span dir="ltr">+965 5176 4654</span>
             <ArrowUpLeft className="size-3" aria-hidden="true" />
           </a>
         </div>
@@ -188,29 +202,44 @@ export default function Home() {
               id="hero-title"
               className="max-w-lg text-[30px] font-normal leading-[1.45] md:text-[40px]"
             >
-              {t("كل مساحة تبدأ بفكرة.", "Every space begins with an idea.")}
-              <br />
-              {t("ومع ", "With ")}
-              <span className="underline decoration-primary/50 decoration-8 underline-offset-4">
-                {t("مودرن،", "Modern,")}
-              </span>
-              <br />
-              {t("تصبح الفكرة ", "we bring it ")}
-              <span className="text-link">{t("واقعًا.", "to life.")}</span>
+              {t(
+                "مكتب مودرن للاستشارات الهندسية",
+                "Modern Engineering Consultancy",
+              )}
             </h1>
             <p className="max-w-md text-base leading-8 text-muted-foreground md:text-lg md:leading-8">
               {t(
-                "من أول خط على الورق إلى آخر تفصيل في الموقع. نرافق مشروعك برؤية معمارية تجمع الجمال، والوظيفة، ودقة الهندسة.",
-                "From the first line on paper to the final detail on site. We guide your project with architecture that brings beauty, function and engineering precision together.",
+                "نصمم رؤيتك بدقة هندسية.. من الفكرة المعمارية واعتماد التراخيص الحكومية وحتى الإشراف الهندسي المتكامل في الكويت.",
+                "We design your vision with engineering precision, from architectural concepts and government permits to comprehensive engineering supervision in Kuwait.",
               )}
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <Button size="lg" render={<a href="#contact" />}>
-                {t("لنتحدث عن مشروعك", "Let’s discuss your project")}
+              <Button
+                nativeButton={false}
+                className="h-auto min-h-14 whitespace-normal py-3"
+                size="lg"
+                render={
+                  <a
+                    href="https://wa.me/96551764654"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }
+              >
+                {t("تواصل معنا عبر واتساب", "Contact us on WhatsApp")}
                 <ArrowUpLeft data-icon="inline-end" aria-hidden="true" />
               </Button>
-              <Button variant="ghost" size="lg" render={<a href="#services" />}>
-                {t("اكتشف خدماتنا", "Explore our services")}
+              <Button
+                nativeButton={false}
+                variant="ghost"
+                className="h-auto min-h-14 whitespace-normal py-3"
+                size="lg"
+                render={<a href="#work" />}
+              >
+                {t(
+                  "استعرض دليل الواجهات وأعمالنا",
+                  "Explore our facades & projects",
+                )}
                 <ArrowDownLeft data-icon="inline-end" aria-hidden="true" />
               </Button>
             </div>
@@ -238,10 +267,10 @@ export default function Home() {
           <figure className="relative flex min-w-0 flex-col">
             <div className="relative aspect-[5/4] overflow-hidden bg-muted lg:aspect-auto lg:min-h-[560px] lg:flex-1">
               <Image
-                src="/architecture-illustration.jpg"
+                src="/portfolio/facade-01.jpg"
                 alt={t(
-                  "صورة توضيحية لعمارة معاصرة تتناغم فيها الخامات الطبيعية والمساحات المفتوحة",
-                  "Illustrative contemporary architecture with natural materials and open living spaces",
+                  "واجهة مقام، تصميم حديث من أعمال مكتب مودرن",
+                  "Maqam facade, a modern design by Modern Engineering Consultancy",
                 )}
                 fill
                 sizes="(min-width: 1024px) 56vw, 100vw"
@@ -256,15 +285,10 @@ export default function Home() {
             </div>
             <figcaption className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-3 text-xs text-muted-foreground">
               <span>{t("ضوء، توازن، وحياة.", "Light, balance and life.")}</span>
-              <a
-                href="https://images.unsplash.com/photo-1600585154340-be6161a56a0c"
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-4"
-              >
+              <a href="#work" className="underline underline-offset-4">
                 {t(
-                  "صورة توضيحية من Unsplash",
-                  "Illustrative image from Unsplash",
+                  "واجهة مقام / من أعمال مودرن",
+                  "Maqam facade / Modern portfolio",
                 )}
               </a>
             </figcaption>
@@ -290,8 +314,8 @@ export default function Home() {
               </h2>
               <p className="max-w-md text-base leading-8 text-muted-foreground">
                 {t(
-                  "نؤمن أن نجاح المشروع يبدأ من فهم من سيعيش فيه. لذلك ننظر إلى كل مشروع كرحلة متكاملة، نربط فيها الفكرة بالمخطط، والتفاصيل بالتنفيذ.",
-                  "We believe a successful project begins with understanding the people who will use it. We approach every project as one connected journey, from the idea to the plan, and from the details to construction.",
+                  "مكتب مودرن للاستشارات الهندسية هو دار استشارية هندسية متخصصة في تقديم حلول التصميم المعماري والإنشائي المتكاملة، نجمع بين الخبرة الهندسية والرؤية العصرية لإنتاج مشاريع تعكس أعلى معايير الجودة والتميز. نؤمن أن كل مشروع هو فرصة لابتكار تجربة فريدة، لذا نحرص على دراسة التفاصيل بعناية لتحقيق التوازن الدقيق بين الجمال المعماري والكفاءة الوظيفية بما يلبي تطلعات عملائنا.",
+                  "Modern Engineering Consultancy specializes in integrated architectural and structural design. We combine engineering expertise with a contemporary vision to create projects of the highest quality. Every project is an opportunity to create a unique experience, balancing architectural beauty and functional efficiency through careful attention to detail and our clients’ aspirations.",
                 )}
               </p>
               <a
@@ -443,7 +467,11 @@ export default function Home() {
                 )}
               </p>
             </div>
-            <Button variant="outline" render={<Link href="/login" />}>
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={<Link href="/login" />}
+            >
               {t("دخول بوابة العملاء", "Client portal")}
               <ArrowUpLeft data-icon="inline-end" aria-hidden="true" />
             </Button>
@@ -474,7 +502,7 @@ export default function Home() {
                 )}
               </p>
               <a
-                href="https://wa.me/96555563171"
+                href="https://wa.me/96551764654"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex min-h-12 items-center gap-3 text-link underline underline-offset-8"
@@ -484,15 +512,31 @@ export default function Home() {
                 </span>
                 <ArrowUpLeft className="size-4" aria-hidden="true" />
               </a>
+              <p className="max-w-sm text-sm leading-7 text-muted-foreground">
+                {t(
+                  "شرق – شارع أحمد الجابر – قطعة 2 – قسيمة بيت التمويل – الدور 26، الكويت",
+                  "Sharq, Ahmad Al Jaber Street, Block 2, Kuwait Finance House plot, Floor 26, Kuwait",
+                )}
+              </p>
               <a
-                href="tel:+96555563171"
+                href="mailto:MODERNCONKW@GMAIL.COM"
+                className="inline-flex min-h-12 max-w-full items-center gap-2 text-sm text-link underline underline-offset-4"
+              >
+                <Mail className="size-4 shrink-0" aria-hidden="true" />
+                <bdi className="break-all">MODERNCONKW@GMAIL.COM</bdi>
+              </a>
+              <a href="tel:+96551764655" className="text-xl" dir="ltr">
+                +965 5176 4655
+              </a>
+              <a
+                href="tel:+96551764654"
                 className="text-xl font-normal"
                 dir="ltr"
               >
-                +965 5556 3171
+                +965 5176 4654
               </a>
               <a
-                href="https://maps.app.goo.gl/NDnBxtjhKsbWg22w6"
+                href="https://www.google.com/maps/search/?api=1&query=شرق+شارع+أحمد+الجابر+بيت+التمويل+الكويت"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex min-h-12 items-center gap-2 text-sm text-muted-foreground underline-offset-4 hover:underline"
@@ -502,12 +546,36 @@ export default function Home() {
                 <ArrowUpLeft className="size-3" aria-hidden="true" />
               </a>
             </div>
-            <InquiryForm />
+            <div className="flex min-w-0 flex-col gap-8">
+              <InquiryForm />
+              <iframe
+                title={t(
+                  "موقع مكتب مودرن في شرق، الكويت",
+                  "Modern office location in Sharq, Kuwait",
+                )}
+                src="https://maps.google.com/maps?q=شرق+شارع+أحمد+الجابر+بيت+التمويل+الكويت&output=embed"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="h-72 w-full border border-border"
+              />
+            </div>
           </div>
         </section>
       </main>
+      <a
+        href="https://wa.me/96551764654"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t(
+          "تواصل مع مودرن عبر واتساب",
+          "Contact Modern on WhatsApp",
+        )}
+        className="no-print fixed bottom-5 end-5 z-40 flex size-14 items-center justify-center rounded-full border border-input bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary-hover"
+      >
+        <MessageCircle className="size-6" aria-hidden="true" />
+      </a>
       <footer className="bg-inverse text-inverse-foreground dark:bg-card dark:text-card-foreground">
-        <div className="mx-auto max-w-[1420px] px-4 pb-6 pt-12 md:px-6 lg:px-10">
+        <div className="mx-auto max-w-[1420px] px-4 pb-24 pt-12 md:px-6 lg:px-10">
           <div className="grid gap-9 pb-10 md:grid-cols-[1.4fr_1fr_1fr]">
             <div className="flex flex-col gap-5">
               <a href="#" className="flex w-fit items-center gap-4">
@@ -572,20 +640,18 @@ export default function Home() {
                 className="inline-flex w-fit items-center gap-2 underline-offset-4 hover:underline"
               >
                 <Camera className="size-4" aria-hidden="true" />
-                Instagram
+                @MODERNOFFICEKW
                 <ArrowUpLeft className="size-3" aria-hidden="true" />
               </a>
               <a
-                href="https://www.tiktok.com/@modernoffice1"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex w-fit items-center gap-2 underline-offset-4 hover:underline"
+                href="mailto:MODERNCONKW@GMAIL.COM"
+                className="inline-flex min-h-12 w-fit max-w-full items-center gap-2 underline-offset-4 hover:underline"
               >
-                TikTok
-                <ArrowUpLeft className="size-3" aria-hidden="true" />
+                <Mail className="size-4 shrink-0" aria-hidden="true" />
+                <bdi className="break-all">MODERNCONKW@GMAIL.COM</bdi>
               </a>
               <a
-                href="https://wa.me/96555563171"
+                href="https://wa.me/96551764654"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex w-fit items-center gap-2 underline-offset-4 hover:underline"

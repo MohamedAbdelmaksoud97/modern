@@ -2,35 +2,29 @@
 import { useEffect, useState } from "react";
 import { usePreferences } from "@/components/platform/preferences";
 import Image from "next/image";
-import {
-  ArrowUpLeft,
-  Building2,
-  CircleAlert,
-  LoaderCircle,
-  MapPin,
-} from "lucide-react";
+import { ArrowUpLeft, Building2, CircleAlert, MapPin } from "lucide-react";
 import type { Portfolio } from "@/lib/types";
+import referencePortfolio from "@/lib/landing-portfolio.json";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
 export function PublishedPortfolio() {
   const { t } = usePreferences();
   const [items, setItems] = useState<Portfolio[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">(
-    "loading",
-  );
+  const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [style, setStyle] = useState("all");
+  const categories = [
+    { value: "all", label: t("جميع الأعمال", "All projects") },
+    { value: "modern", label: t("حديث", "Modern") },
+    { value: "neo-classic", label: t("نيو كلاسيك", "Neo classic") },
+    { value: "classic", label: t("كلاسيكي وإسلامي", "Classic & Islamic") },
+  ];
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
-      setStatus("loading");
+      setError(false);
       try {
         const response = await fetch("/api/public", {
           signal: controller.signal,
@@ -41,14 +35,33 @@ export function PublishedPortfolio() {
         setItems(
           data.portfolio.filter((item: Portfolio) => item.published !== false),
         );
-        setStatus("ready");
       } catch {
-        if (!controller.signal.aborted) setStatus("error");
+        if (!controller.signal.aborted) setError(true);
       }
     }
     void load();
     return () => controller.abort();
   }, [attempt]);
+  function categoryStyle(category: string) {
+    if (/neo|نيو|حديث كلاسيكي/i.test(category)) return "neo-classic";
+    if (/classic|islamic|كلاسيك|إسلامي/i.test(category)) return "classic";
+    if (/modern|حديث/i.test(category)) return "modern";
+    return "other";
+  }
+  const projects = [
+    ...referencePortfolio.map((item) => ({
+      ...item,
+      title: t(item.title, item.title_en),
+      location: "",
+      description: t(item.description, item.description_en),
+      category: categories.find((category) => category.value === item.style)!
+        .label,
+    })),
+    ...items.map((item) => ({ ...item, style: categoryStyle(item.category) })),
+  ];
+  const visible = projects.filter(
+    (item) => style === "all" || item.style === style,
+  );
   return (
     <section
       id="work"
@@ -56,7 +69,7 @@ export function PublishedPortfolio() {
       className="border-y border-border bg-secondary/35"
     >
       <div className="mx-auto max-w-[1420px] px-4 py-14 md:px-6 lg:px-10 lg:py-20">
-        <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div className="flex flex-col gap-4">
             <p className="text-xs font-medium text-link">
               {t("03 / أعمالنا", "03 / Our work")}
@@ -65,116 +78,96 @@ export function PublishedPortfolio() {
               id="work-title"
               className="text-2xl font-medium leading-relaxed"
             >
-              {t("لكل مشروع حكاية.", "Every project has a story.")}
-              <br />
-              {t("ولكل تفصيل معنى.", "Every detail has a purpose.")}
+              {t(
+                "دليل الواجهات وأعمالنا المختارة",
+                "Selected projects & facade designs",
+              )}
             </h2>
           </div>
           <p className="max-w-sm text-sm leading-7 text-muted-foreground">
             {t(
-              "مساحة لعرض مشاريع المكتب وصورها، بعد اعتمادها للنشر.",
-              "A selection of office projects and images, once approved for publication.",
+              "نماذج من تصاميم المكتب، تجمع بين الطراز الحديث والنيو كلاسيك والكلاسيكي والإسلامي.",
+              "Office designs spanning modern, neo-classical, classical and Islamic architecture.",
             )}
           </p>
         </div>
-        {status === "loading" && (
-          <div
-            role="status"
-            className="flex min-h-56 items-center justify-center gap-3 text-sm text-muted-foreground"
+        <Tabs value={style} onValueChange={(value) => setStyle(String(value))}>
+          <TabsList
+            aria-label={t(
+              "تصفية الأعمال حسب النمط",
+              "Filter projects by style",
+            )}
+            className="mb-6 w-full"
           >
-            <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
-            {t("جارٍ تحميل الأعمال…", "Loading projects…")}
-          </div>
-        )}
-        {status === "error" && (
-          <Alert className="text-start">
-            <CircleAlert aria-hidden="true" />
-            <AlertTitle>
-              {t("تعذر عرض الأعمال الآن", "Projects are unavailable right now")}
-            </AlertTitle>
-            <AlertDescription>
-              {t(
-                "يمكنك إعادة المحاولة أو التواصل معنا للتعرف على أعمال المكتب.",
-                "Please try again or contact us to learn about our work.",
-              )}
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setAttempt((value) => value + 1)}
-              >
-                {t("إعادة المحاولة", "Try again")}
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-        {status === "ready" && items.length === 0 && (
-          <Empty className="min-h-64 border border-border bg-background">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Building2 aria-hidden="true" />
-              </EmptyMedia>
-              <EmptyTitle>
-                {t(
-                  "أعمالنا تُضاف هنا قريبًا",
-                  "Our project gallery is coming soon",
-                )}
-              </EmptyTitle>
-              <EmptyDescription>
-                {t(
-                  "نعمل على تجهيز معرض مشاريع المكتب. يسعدنا الحديث معك عن مشروعك وما يناسبه من حلول.",
-                  "We are preparing our project gallery. In the meantime, we would love to discuss your project and the right solutions for it.",
-                )}
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button variant="outline" render={<a href="#contact" />}>
-                {t("لنتحدث عن فكرتك", "Let’s talk about your idea")}
-                <ArrowUpLeft data-icon="inline-end" aria-hidden="true" />
-              </Button>
-            </EmptyContent>
-          </Empty>
-        )}
-        {status === "ready" && items.length > 0 && (
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => (
-              <article key={item.id} className="flex min-w-0 flex-col gap-4">
-                <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                  {item.image_url ? (
-                    <Image
-                      src={item.image_url}
-                      alt={item.title}
-                      fill
-                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                      unoptimized
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <Building2
-                        className="size-12 text-muted-foreground"
-                        aria-hidden="true"
+            {categories.map((category) => (
+              <TabsTrigger key={category.value} value={category.value}>
+                {category.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <TabsContent value={style}>
+            <div className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
+              {visible.map((item) => (
+                <article key={item.id} className="flex min-w-0 flex-col gap-4">
+                  <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+                    {item.image_url ? (
+                      <Image
+                        src={item.image_url}
+                        alt={item.title}
+                        fill
+                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        unoptimized={!item.image_url.startsWith("/portfolio/")}
+                        className="object-contain"
                       />
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-3">
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <Building2
+                          className="size-12 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-link">{item.category}</p>
                   {item.location && (
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin className="size-3" aria-hidden="true" />
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <MapPin className="size-3 shrink-0" aria-hidden="true" />
                       {item.location}
                     </p>
                   )}
-                </div>
-                <h3 className="text-lg font-medium">{item.title}</h3>
-                {item.description && (
+                  <h3 className="text-lg font-medium">{item.title}</h3>
                   <p className="whitespace-pre-line text-sm leading-7 text-muted-foreground">
                     {item.description}
                   </p>
-                )}
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+        {error && (
+          <Alert className="mt-8 text-start">
+            <CircleAlert aria-hidden="true" />
+            <AlertTitle>
+              {t(
+                "تعذر تحميل الأعمال الإضافية",
+                "Additional projects could not be loaded",
+              )}
+            </AlertTitle>
+            <AlertDescription>
+              {t(
+                "يمكنك تصفح دليل الواجهات أعلاه أو إعادة المحاولة لتحميل أحدث الأعمال.",
+                "Browse the facade collection above or try again to load the latest projects.",
+              )}
+              <Button
+                variant="outline"
+                className="mt-3"
+                onClick={() => setAttempt((value) => value + 1)}
+              >
+                {t("إعادة المحاولة", "Try again")}
+                <ArrowUpLeft data-icon="inline-end" aria-hidden="true" />
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
       </div>
     </section>

@@ -365,7 +365,7 @@ export function AuditTrail() {
       </div>
       {entries.length ? (
         <div className="data-table-wrap">
-          <Table>
+          <Table aria-label={t("سجل العمليات", "Audit trail")}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t("العملية", "Action")}</TableHead>
@@ -413,6 +413,7 @@ export function AccountSettings() {
           {data.user.email}
         </p>
         <Button
+          nativeButton={false}
           className="mt-6"
           variant="outline"
           render={<a href="/change-password" />}

@@ -42,9 +42,9 @@ export function Tasks() {
         )}
       </div>
       {data.tasks.length ? (
-        <div className="grid items-start gap-5 lg:grid-cols-3">
+        <div className="grid min-w-0 items-start gap-5 xl:grid-cols-3">
           {statuses.map((status) => (
-            <section key={status.value} className="border bg-muted/40 p-4">
+            <section key={status.value} className="min-w-0 border bg-muted/40 p-4">
               <div className="mb-5 flex items-center justify-between">
                 <h2 className="font-medium">{status.label}</h2>
                 <Badge variant="outline">
@@ -58,14 +58,14 @@ export function Tasks() {
                 {data.tasks
                   .filter((task) => task.status === status.value)
                   .map((task) => (
-                    <article key={task.id} className="border bg-card p-4">
+                    <article key={task.id} className="min-w-0 border bg-card p-4">
                       <Link
                         href={`/workspace/projects/${task.project_id}`}
                         className="flex items-center justify-between gap-2 text-xs text-link"
                       >
                         {data.projects.find((p) => p.id === task.project_id)
                           ?.name || t("المشروع", "Project")}
-                        <ArrowUpLeft className="size-3.5" />
+                        <ArrowUpLeft className="size-3.5 shrink-0" />
                       </Link>
                       <h3 className="my-4 leading-7">{task.title}</h3>
                       <p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">

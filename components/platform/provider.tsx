@@ -118,14 +118,14 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
   return (
     <PlatformContext value={{ data, refresh, command, notify: setNotice }}>
       {error && (
-        <div className="fixed inset-x-4 top-4 z-60">
+        <div className="fixed inset-x-4 top-4 z-40">
           <ErrorNotice error={error} />
         </div>
       )}
       {notice && (
         <div
           role="status"
-          className="fixed bottom-5 inset-x-4 z-60 mx-auto flex w-fit max-w-[calc(100%-32px)] items-center gap-3 border border-border bg-card px-5 py-3 shadow-md"
+          className="fixed bottom-5 inset-x-4 z-40 mx-auto flex w-fit max-w-[calc(100%-32px)] items-center gap-3 border border-border bg-card px-5 py-3 shadow-md"
         >
           <CheckCircle2 className="size-5 shrink-0 text-success" />
           <span>{t(notice)}</span>

@@ -1,0 +1,101 @@
+[
+  {
+    "id": "brief-facade-01",
+    "title": "واجهة مقام",
+    "style": "modern",
+    "description": "واجهة حديثة بطابع فاخر تعتمد على إبراز المواد الطبيعية والحجر مع تكوين رأسي متوازن يعزز من إحساس الارتفاع والفخامة.",
+    "image_url": "/portfolio/facade-01.jpg",
+    "title_en": "Maqam facade",
+    "description_en": "A refined modern facade with natural stone and balanced vertical forms that emphasize height and elegance."
+  },
+  {
+    "id": "brief-facade-02",
+    "title": "واجهة وميض",
+    "style": "modern",
+    "description": "تصميم عصري يجمع بين بساطة الكتل وإبراز التفاصيل الزخرفية والهندسية مع إضاءة مدروسة تمنح الواجهة حركة وانسيابية.",
+    "image_url": "/portfolio/facade-02.jpg",
+    "title_en": "Wameed facade",
+    "description_en": "A contemporary composition combining simple volumes, geometric details and carefully planned lighting."
+  },
+  {
+    "id": "brief-facade-03",
+    "title": "واجهة وتيرة",
+    "style": "modern",
+    "description": "واجهة حديثة تعتمد على الإيقاع المنتظم والخطوط الرأسية المتكررة مع تناغم الخشب والحجر والإضاءة الدافئة.",
+    "image_url": "/portfolio/facade-03.jpg",
+    "title_en": "Wateera facade",
+    "description_en": "A modern facade with rhythmic vertical lines and a harmonious mix of wood, stone and warm lighting."
+  },
+  {
+    "id": "brief-facade-04",
+    "title": "واجهة نبض",
+    "style": "modern",
+    "description": "تصميم متوازن يرتكز على الإضاءة الخطية المدمجة لتحديد الكتل وإبراز العمق البصري بهوية معمارية حديثة وواضحة.",
+    "image_url": "/portfolio/facade-04.jpg",
+    "title_en": "Nabd facade",
+    "description_en": "A balanced design with integrated linear lighting that defines volumes and highlights architectural depth."
+  },
+  {
+    "id": "brief-facade-05",
+    "title": "واجهة وقار",
+    "style": "neo-classic",
+    "description": "واجهة نيو كلاسيك تجمع بين الفخامة والهدوء من خلال البروزات المتناسقة والتفاصيل المعمارية الأنيقة دون مبالغة.",
+    "image_url": "/portfolio/facade-05.jpg",
+    "title_en": "Waqar facade",
+    "description_en": "A calm neo-classical facade with balanced projections and elegant architectural details."
+  },
+  {
+    "id": "brief-facade-06",
+    "title": "واجهة وسام",
+    "style": "neo-classic",
+    "description": "تصميم راقٍ يبرز الأعمدة والتفاصيل الرأسية بأسلوب مبسط يجمع بين هيبة الطراز الكلاسيكي ونظافة الخطوط المعاصرة.",
+    "image_url": "/portfolio/facade-06.jpg",
+    "title_en": "Wesam facade",
+    "description_en": "A refined facade with simplified columns and vertical details, combining classical presence with contemporary clarity."
+  },
+  {
+    "id": "brief-facade-07",
+    "title": "واجهة رسوخ",
+    "style": "neo-classic",
+    "description": "تكوين معماري قوي يرتكز على الكتل الحجرية الواضحة والمدخل البارز لإضفاء طابع من الاستقرار والفخامة العملية.",
+    "image_url": "/portfolio/facade-07.jpg",
+    "title_en": "Rusoukh facade",
+    "description_en": "A strong composition of stone volumes and a prominent entrance, conveying stability and practical elegance."
+  },
+  {
+    "id": "brief-facade-08",
+    "title": "واجهة عماد",
+    "style": "classic",
+    "description": "واجهة كلاسيكية متماثلة تعكس أناقة التفاصيل والكرانيش المعمارية مع مدخل محوري يمنح المبنى حضوراً رسمياً.",
+    "image_url": "/portfolio/facade-08.jpg",
+    "title_en": "Emad facade",
+    "description_en": "A symmetrical classical facade with elegant cornices, architectural details and a central entrance."
+  },
+  {
+    "id": "brief-facade-09",
+    "title": "واجهة إرث",
+    "style": "classic",
+    "description": "تصميم كلاسيكي فاخر يعتمد على الأقواس المتكررة والأعمدة البارزة والتماثل الهندسي لإبراز العراقة والفخامة.",
+    "image_url": "/portfolio/facade-09.jpg",
+    "title_en": "Erth facade",
+    "description_en": "A classical design with repeated arches, prominent columns and geometric symmetry."
+  },
+  {
+    "id": "brief-facade-10",
+    "title": "واجهة جذور",
+    "style": "classic",
+    "description": "واجهة مستوحاة من العمارة الإسلامية تجمع بين الأقواس المدببة والنقوش الهندسية والتكوين المتناظر بروح معاصرة.",
+    "image_url": "/portfolio/facade-10.jpg",
+    "title_en": "Juthoor facade",
+    "description_en": "An Islamic-inspired facade with pointed arches, geometric motifs and a symmetrical contemporary composition."
+  },
+  {
+    "id": "brief-facade-11",
+    "title": "واجهة جلالة",
+    "style": "classic",
+    "description": "واجهة كلاسيكية بطابع قصري تعتمد على الأعمدة الكاملة والأقواس الكبيرة والتفاصيل الزخرفية المتقنة.",
+    "image_url": "/portfolio/facade-11.jpg",
+    "title_en": "Jalalah facade",
+    "description_en": "A palatial classical facade with full-height columns, large arches and refined ornamental details."
+  }
+]

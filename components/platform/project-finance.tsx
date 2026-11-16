@@ -94,7 +94,7 @@ export function ProjectFinance({
           </Button>
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {visible("quotation") && (
           <div className="app-panel">
             <Wallet className="mb-4 size-5 text-link" />
@@ -135,7 +135,7 @@ export function ProjectFinance({
           </h3>
           {allocations.length ? (
             <div className="data-table-wrap">
-              <Table>
+              <Table aria-label={t("جدول الدفعات", "Payment schedule")}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("المرحلة", "Stage")}</TableHead>
@@ -181,7 +181,7 @@ export function ProjectFinance({
           </h3>
           {payments.length ? (
             <div className="data-table-wrap">
-              <Table>
+              <Table aria-label={t("الدفعات المسددة", "Recorded payments")}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("التاريخ", "Date")}</TableHead>
@@ -345,7 +345,7 @@ export function ProjectFinance({
             {stages.slice(0, 9).map((s, i) => (
               <div
                 key={s}
-                className="grid grid-cols-[1fr_95px] items-center gap-3 border-b pb-4"
+                className="grid grid-cols-1 items-center gap-3 border-b pb-4 sm:grid-cols-[minmax(0,1fr)_112px]"
               >
                 <div className="flex flex-col gap-2">
                   <span className="text-sm">{s}</span>

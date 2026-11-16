@@ -297,7 +297,7 @@ export function Dashboard({ portal = false }: { portal?: boolean }) {
           </p>
         </div>
         {["manager", "secretary"].includes(data.user.role) && (
-          <Button render={<Link href="/workspace/projects?new=1" />}>
+          <Button nativeButton={false} render={<Link href="/workspace/projects?new=1" />}>
             <Plus data-icon="inline-start" aria-hidden="true" />
             {t("مشروع جديد", "New project")}
           </Button>
@@ -369,13 +369,13 @@ export function Dashboard({ portal = false }: { portal?: boolean }) {
                 <Link
                   key={project.id}
                   href={`${base}/projects/${project.id}`}
-                  className="flex items-center gap-4 border-b py-5 last:border-0 hover:bg-muted/50"
+                  className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-x-3 gap-y-3 border-b py-5 last:border-0 hover:bg-muted/50 sm:flex sm:gap-4"
                 >
                   <div className="flex size-11 shrink-0 items-center justify-center bg-accent text-accent-foreground">
                     <FolderKanban className="size-5" aria-hidden="true" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
+                    <p className="line-clamp-2 text-sm font-medium">
                       {project.name}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -385,7 +385,7 @@ export function Dashboard({ portal = false }: { portal?: boolean }) {
                         t("مودرن", "Modern")}
                     </p>
                   </div>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="col-start-2 w-fit">
                     {project.stage === undefined ||
                     (client && !project.visibility?.status)
                       ? t("مشروعك", "Your project")

@@ -32,11 +32,13 @@ type Errors = Partial<
 export function InquiryForm() {
   const { t } = usePreferences();
   const services = [
-    t("التصميم المعماري", "Architectural design"),
-    t("الأعمال الإنشائية", "Structural engineering"),
-    t("الواجهات والمناظير", "Facades & visualization"),
-    t("الإشراف والمتابعة", "Supervision & follow-up"),
-    t("معاملات البلدية", "Municipality submissions"),
+    t("تصميم الواجهات والتصميم المعماري", "Facade & architectural design"),
+    t("التصميم الإنشائي والأنظمة (MEP)", "Structural design & MEP systems"),
+    t("التراخيص واعتماد الجهات الحكومية", "Permits & government approvals"),
+    t(
+      "الاستشارات الهندسية والإشراف على التنفيذ",
+      "Engineering consultancy & site supervision",
+    ),
     t("استشارة أخرى", "Other consultation"),
   ];
   const validationMessages = {

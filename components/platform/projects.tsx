@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Plus,
-  Search,
   ArrowUpLeft,
   MapPin,
   CalendarDays,
@@ -12,7 +11,6 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -28,6 +26,7 @@ import { usePlatform } from "./provider";
 import { usePreferences, englishStages, englishRoles } from "./preferences";
 import {
   TextField,
+  SearchField,
   AreaField,
   SelectField,
   ActionForm,
@@ -116,23 +115,19 @@ export function Projects({
         )}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="relative flex-1">
-          <label htmlFor="project-search" className="sr-only">
-            {t("البحث في المشروعات", "Search projects")}
-          </label>
-          <Search className="pointer-events-none absolute start-4 top-4 size-4 text-muted-foreground" />
-          <Input
+        <div className="min-w-0 flex-1">
+          <SearchField
             id="project-search"
+            label={t("البحث في المشروعات", "Search projects")}
             placeholder={t(
               "ابحث باسم المشروع أو العميل أو الرقم…",
               "Search by project, client or reference…",
             )}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="ps-11"
           />
         </div>
-        <div className="w-full sm:w-64">
+        <div className="w-full shrink-0 sm:w-60">
           <SelectField
             label={t("المرحلة", "Stage")}
             name="stage_filter"
@@ -146,13 +141,8 @@ export function Projects({
         </div>
       </div>
       {projects.length ? (
-        <div
-          className="data-table-wrap"
-          role="region"
-          aria-label={t("قائمة المشروعات", "Projects list")}
-          tabIndex={0}
-        >
-          <Table>
+        <div className="data-table-wrap">
+          <Table aria-label={t("قائمة المشروعات", "Projects list")}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t("المشروع", "Project")}</TableHead>
@@ -168,7 +158,7 @@ export function Projects({
             <TableBody>
               {projects.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell>
+                  <TableCell className="min-w-48 max-w-72 whitespace-normal">
                     <Link
                       href={`${base}/projects/${p.id}`}
                       className="font-medium hover:text-link hover:underline"
@@ -183,7 +173,7 @@ export function Projects({
                     </p>
                   </TableCell>
                   {!portal && (
-                    <TableCell>
+                    <TableCell className="min-w-36 max-w-48 whitespace-normal">
                       {p.client_name ||
                         data.clients.find((c) => c.id === p.client_id)?.name ||
                         "—"}
@@ -196,10 +186,13 @@ export function Projects({
                         : stages[p.stage]}
                     </Badge>
                   </TableCell>
-                  <TableCell>{p.location || "—"}</TableCell>
+                  <TableCell className="min-w-36 max-w-48 whitespace-normal">
+                    {p.location || "—"}
+                  </TableCell>
                   <TableCell>{date(p.due_date)}</TableCell>
                   <TableCell>
                     <Button
+                      nativeButton={false}
                       variant="ghost"
                       size="icon"
                       className="px-0!"
@@ -360,24 +353,24 @@ export function ProjectDetail({
         {t("العودة للمشروعات", "Back to projects")}
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-5">
-        <div>
+        <div className="min-w-0 flex-1 basis-72">
           <p className="mb-2 font-mono text-xs text-link" dir="ltr">
             {p.code}
           </p>
           <h1 className="text-3xl font-medium">{p.name}</h1>
           <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <UserRound className="size-3.5" />
+              <UserRound className="size-3.5 shrink-0" />
               {p.client_name ||
                 data.clients.find((c) => c.id === p.client_id)?.name ||
                 t("العميل")}
             </span>
             <span className="flex items-center gap-1.5">
-              <MapPin className="size-3.5" />
+              <MapPin className="size-3.5 shrink-0" />
               {p.location}
             </span>
             <span className="flex items-center gap-1.5">
-              <CalendarDays className="size-3.5" />
+              <CalendarDays className="size-3.5 shrink-0" />
               {date(p.due_date)}
             </span>
           </div>
@@ -428,7 +421,7 @@ export function ProjectDetail({
         </div>
       )}
       <Tabs defaultValue="overview">
-        <TabsList className="mb-6 flex h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+        <TabsList className="mb-2 w-full">
           <TabsTrigger value="overview">{t("نظرة عامة")}</TabsTrigger>
           <TabsTrigger value="documents">{t("المستندات")}</TabsTrigger>
           {showFinance && (

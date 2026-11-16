@@ -182,7 +182,7 @@ export function WhatsApp() {
             </div>
           </section>
           <Tabs defaultValue="settings">
-            <TabsList className="mb-6 flex h-auto flex-wrap">
+            <TabsList className="mb-2 w-full">
               <TabsTrigger value="settings">
                 {t("الإعدادات والقوالب", "Settings & templates")}
               </TabsTrigger>
@@ -314,7 +314,7 @@ export function WhatsApp() {
                 </div>
                 {data.notifications.length ? (
                   <div className="data-table-wrap">
-                    <Table>
+                    <Table aria-label={t("سجل الرسائل", "Message history")}>
                       <TableHeader>
                         <TableRow>
                           <TableHead>{t("العميل", "Client")}</TableHead>

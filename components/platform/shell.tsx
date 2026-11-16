@@ -111,8 +111,8 @@ export function Shell({
   const current = path.slice(base.length).split("/")[1] || "";
   const title = items.find((n) => n.key === current)?.label || "تفاصيل المشروع";
   const menu = (
-    <div className="flex h-full flex-col">
-      <Link href="/" className="flex items-center gap-3 border-b px-6 py-6">
+    <div className="flex h-full min-h-0 flex-col">
+      <Link href="/" className="flex shrink-0 items-center gap-3 border-b px-6 py-6">
         <Image
           src="/logo.png"
           width={38}
@@ -153,7 +153,7 @@ export function Shell({
           </Link>
         ))}
       </nav>
-      <div className="flex items-center gap-3 border-t p-5">
+      <div className="flex shrink-0 items-center gap-3 border-t p-5">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full border bg-accent text-accent-foreground">
           {data.user.name.slice(0, 1)}
         </div>
@@ -196,7 +196,7 @@ export function Shell({
         <SheetContent
           showCloseButton={false}
           side={locale === "ar" ? "right" : "left"}
-          className="w-72 p-0"
+          className="w-72 gap-0 p-0"
           dir={locale === "ar" ? "rtl" : "ltr"}
         >
           <SheetHeader className="sr-only">
@@ -219,8 +219,8 @@ export function Shell({
         </SheetContent>
       </Sheet>
       <div className="lg:ms-64">
-        <header className="no-print flex min-h-20 items-center justify-between gap-4 border-b bg-card px-4 md:px-8">
-          <div className="flex min-w-0 items-center gap-3">
+        <header className="no-print flex min-h-20 items-center justify-between gap-2 border-b bg-card px-4 sm:gap-4 sm:px-6 xl:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <Button
               className="px-0! lg:hidden"
               size="icon"
@@ -231,14 +231,17 @@ export function Shell({
               <Menu />
             </Button>
             <p className="truncate text-sm text-muted-foreground">
-              {portal ? t("بوابة العميل") : t("مساحة العمل")}
-              <span className="px-3 text-border">/</span>
+              <span className="hidden sm:inline">
+                {portal ? t("بوابة العميل") : t("مساحة العمل")}
+                <span aria-hidden="true" className="px-3 text-muted-foreground">/</span>
+              </span>
               <span className="text-foreground">{t(title)}</span>
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Button
               variant="ghost"
+              size="icon"
               onClick={toggleLocale}
               aria-label={t("التبديل إلى الإنجليزية", "Switch to Arabic")}
             >
@@ -268,7 +271,7 @@ export function Shell({
         </header>
         <main
           id="workspace-main"
-          className="workspace-main mx-auto max-w-[1500px] p-4 pb-28 md:p-8 md:pb-28"
+          className="workspace-main mx-auto max-w-[1420px] p-4 pb-24 sm:p-6 sm:pb-24 xl:p-8 xl:pb-24"
         >
           {children}
         </main>

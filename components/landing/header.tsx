@@ -66,11 +66,11 @@ export function LandingHeader() {
         </nav>
         <div className="flex items-center gap-1">
           <div className="hidden items-center gap-2 xl:flex">
-            <Button variant="ghost" render={<Link href="/login" />}>
+            <Button nativeButton={false} variant="ghost" render={<Link href="/login" />}>
               <UserRound data-icon="inline-start" aria-hidden="true" />
               {t("بوابة العملاء", "Client portal")}
             </Button>
-            <Button render={<a href="#contact" />}>
+            <Button nativeButton={false} render={<a href="#contact" />}>
               {t("ابدأ مشروعك", "Start your project")}
               <ArrowUpLeft data-icon="inline-end" aria-hidden="true" />
             </Button>
@@ -171,12 +171,13 @@ export function LandingHeader() {
               </div>
               <div className="mt-auto flex flex-col gap-3 p-6">
                 <Button
+                  nativeButton={false}
                   render={<a href="#contact" onClick={() => setOpen(false)} />}
                 >
                   {t("ابدأ مشروعك", "Start your project")}
                   <ArrowUpLeft data-icon="inline-end" aria-hidden="true" />
                 </Button>
-                <Button variant="outline" render={<Link href="/login" />}>
+                <Button nativeButton={false} variant="outline" render={<Link href="/login" />}>
                   {t("بوابة العملاء وفريق العمل", "Client & team portal")}
                 </Button>
               </div>

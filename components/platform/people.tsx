@@ -1,8 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Plus, Search, Pencil, KeyRound } from "lucide-react";
+import { Plus, Pencil, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -20,6 +19,7 @@ import {
   ActionForm,
   FormDialog,
   TextField,
+  SearchField,
   AreaField,
   SelectField,
   NoData,
@@ -57,14 +57,10 @@ export function Clients() {
           {t("عميل جديد", "New client")}
         </Button>
       </div>
-      <div className="relative max-w-xl">
-        <label htmlFor="client-search" className="sr-only">
-          {t("البحث عن عميل", "Search clients")}
-        </label>
-        <Search className="absolute start-4 top-4 size-4 text-muted-foreground" />
-        <Input
+      <div className="w-full max-w-xl">
+        <SearchField
           id="client-search"
-          className="ps-11"
+          label={t("البحث عن عميل", "Search clients")}
           placeholder={t(
             "ابحث بالاسم أو رقم الهوية أو الهاتف…",
             "Search name, national ID or phone…",
@@ -75,7 +71,7 @@ export function Clients() {
       </div>
       {clients.length ? (
         <div className="data-table-wrap">
-          <Table>
+          <Table aria-label={t("العملاء", "Clients")}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t("العميل", "Client")}</TableHead>
@@ -90,7 +86,7 @@ export function Clients() {
                 const user = data.users.find((u) => u.client_id === c.id);
                 return (
                   <TableRow key={c.id}>
-                    <TableCell>
+                    <TableCell className="min-w-48 max-w-72 whitespace-normal">
                       <p className="font-medium">{c.name}</p>
                       <p
                         className="mt-1 text-xs text-muted-foreground"
