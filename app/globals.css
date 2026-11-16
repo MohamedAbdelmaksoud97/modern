@@ -5,9 +5,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-arabic), var(--font-geist-sans), Arial, sans-serif;
+  /* Use the self-hosted primary face directly: Next's generated Roboto
+     fallback includes Arial Arabic glyphs, which would shadow Tajawal. */
+  --font-sans: Roboto, var(--font-arabic), Arial, sans-serif;
   --font-heading: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: Roboto, var(--font-arabic), Arial, sans-serif;
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);

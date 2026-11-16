@@ -9,7 +9,6 @@ import {
   Building2,
   Compass,
   DraftingCompass,
-  Camera,
   MapPin,
   MessageCircle,
   Mail,
@@ -21,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { LandingHeader } from "@/components/landing/header";
 import { InquiryForm } from "@/components/landing/inquiry-form";
 import { PublishedPortfolio } from "@/components/landing/published-portfolio";
+import { InstagramIcon } from "@/components/icons/instagram";
 function FloorPlan() {
   return (
     <svg
@@ -570,7 +570,7 @@ export default function Home() {
           "تواصل مع مودرن عبر واتساب",
           "Contact Modern on WhatsApp",
         )}
-        className="no-print fixed bottom-5 end-5 z-40 flex size-14 items-center justify-center rounded-full border border-input bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary-hover"
+        className="no-print fixed right-5 bottom-5 z-40 flex size-14 items-center justify-center rounded-full border border-input bg-primary text-primary-foreground shadow-md transition-colors hover:bg-primary-hover"
       >
         <MessageCircle className="size-6" aria-hidden="true" />
       </a>
@@ -637,10 +637,13 @@ export default function Home() {
                 href="https://www.instagram.com/modernofficekw/"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex w-fit items-center gap-2 underline-offset-4 hover:underline"
+                className="inline-flex min-h-12 w-fit max-w-full items-center gap-3 underline-offset-4 hover:underline"
               >
-                <Camera className="size-4" aria-hidden="true" />
-                @MODERNOFFICEKW
+                <InstagramIcon className="size-6 shrink-0" aria-hidden="true" />
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span>{t("إنستجرام", "Instagram")}</span>
+                  <bdi className="text-xs">@MODERNOFFICEKW</bdi>
+                </span>
                 <ArrowUpLeft className="size-3" aria-hidden="true" />
               </a>
               <a

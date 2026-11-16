@@ -1,5 +1,64 @@
 import { test, expect } from "@playwright/test";
 
+test("mixed Arabic and English text uses Tajawal and Roboto by script", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("DOM.enable");
+  await cdp.send("CSS.enable");
+  async function renderedFonts(selector: string) {
+    const { root } = await cdp.send("DOM.getDocument");
+    const { nodeId } = await cdp.send("DOM.querySelector", {
+      nodeId: root.nodeId,
+      selector,
+    });
+    const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
+    return fonts
+      .filter((font) => font.glyphCount > 0)
+      .map((font) => font.familyName);
+  }
+  expect(await renderedFonts("#hero-title")).toContain("Tajawal");
+  const email = page.locator('#contact a[href^="mailto:"]');
+  await email.scrollIntoViewIfNeeded();
+  expect(await renderedFonts('#contact a[href^="mailto:"] bdi')).toContain(
+    "Roboto",
+  );
+  const mixed = await renderedFonts("#services article:nth-child(2) h3");
+  expect(mixed).toContain("Roboto");
+  expect(mixed.some((font) => font.startsWith("Tajawal"))).toBe(true);
+  await page.getByRole("button", { name: "التبديل إلى الإنجليزية" }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await page.evaluate(() => document.fonts.ready);
+  expect(await renderedFonts("#hero-title")).toContain("Roboto");
+  await cdp.detach();
+});
+
+test("Arabic WhatsApp shortcut stays on the right and Instagram is clearly labeled", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/");
+  const whatsapp = page.getByRole("link", {
+    name: "تواصل مع مودرن عبر واتساب",
+    exact: true,
+  });
+  const box = (await whatsapp.boundingBox())!;
+  expect(320 - box.x - box.width).toBe(20);
+  const instagram = page.getByRole("link", {
+    name: /إنستجرام.*MODERNOFFICEKW/,
+  });
+  await expect(instagram).toHaveAttribute(
+    "href",
+    "https://www.instagram.com/modernofficekw/",
+  );
+  await instagram.scrollIntoViewIfNeeded();
+  await expect(instagram).toBeVisible();
+  await expect(instagram.locator('svg[data-icon="instagram"]')).toBeVisible();
+});
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/public", (route) =>
     route.fulfill({ json: { portfolio: [] } }),
@@ -146,7 +205,9 @@ test("published portfolio displays real supplied entries and excludes drafts", a
   await page.goto("/");
   await expect(page.locator("#work article")).toHaveCount(12);
   await expect(page.getByRole("heading", { name: entry.title })).toBeVisible();
-  await expect(page.locator("#work").getByText(entry.location, { exact: true })).toBeVisible();
+  await expect(
+    page.locator("#work").getByText(entry.location, { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("مشروع مسودة للاختبار")).toHaveCount(0);
 });
 

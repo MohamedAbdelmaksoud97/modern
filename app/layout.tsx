@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Tajawal } from "next/font/google";
+import { Roboto, Tajawal } from "next/font/google";
 import "./globals.css";
 import { PreferencesProvider } from "@/components/platform/preferences";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const latin = Roboto({
+  variable: "--font-roboto",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -34,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ar"
       dir="rtl"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${arabic.variable} h-full antialiased`}
+      className={`${latin.variable} ${arabic.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <PreferencesProvider>{children}</PreferencesProvider>
