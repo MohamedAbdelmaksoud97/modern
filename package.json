@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/db-migrate.mjs",
+    "whatsapp:storage:setup": "node scripts/setup-waha-storage.mjs",
     "test": "tsx --test tests/backend*.test.ts",
     "test:whatsapp": "node --conditions=react-server --import tsx --test tests/whatsapp*.test.ts",
     "test:e2e": "playwright test",

@@ -210,3 +210,21 @@ test("timeouts and ambiguous provider responses are never automatically retryabl
     error: "rate_limited",
   });
 });
+
+
+test("starting pairing recovers a failed session using restart", async () => {
+  let reads = 0;
+  const calls: string[] = [];
+  const client = createWahaClient(
+    { url: "http://127.0.0.1:3999", key: "secret", session: "default" },
+    async (input, init) => {
+      if (init?.method === "POST") {
+        calls.push(String(input));
+        return Response.json({});
+      }
+      return Response.json({ status: reads++ === 0 ? "FAILED" : "STARTING" });
+    },
+  );
+  assert.equal(await client.sessionAction("start"), "STARTING");
+  assert.deepEqual(calls, ["http://127.0.0.1:3999/api/sessions/default/restart"]);
+});

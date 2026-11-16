@@ -215,7 +215,8 @@ export function createWahaClient(
       }
     },
     async sessionAction(action: "start" | "restart"): Promise<string> {
-      if (action === "start" && (await this.status()) === "not_started") {
+      const status = action === "start" ? await this.status() : null;
+      if (action === "start" && status === "not_started") {
         const r = await request("/api/sessions", "POST", {
           name: config.session,
           start: true,
@@ -223,7 +224,9 @@ export function createWahaClient(
         if (!r.ok) throw new Error("provider_unavailable");
       } else {
         const r = await request(
-          `/api/sessions/${encodeURIComponent(config.session)}/${action}`,
+          `/api/sessions/${encodeURIComponent(config.session)}/${
+            action === "start" && status === "FAILED" ? "restart" : action
+          }`,
           "POST",
         );
         if (!r.ok) throw new Error("provider_unavailable");

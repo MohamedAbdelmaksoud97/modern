@@ -1,13 +1,20 @@
 services:
   waha:
     # Set an approved immutable version/digest in deployment/waha.env; no floating default.
-    image: ${WAHA_IMAGE:?Set WAHA_IMAGE to an approved pinned image tag or digest}
+    build:
+      context: ..
+      dockerfile: deployment/waha.Dockerfile
+      args:
+        WAHA_IMAGE: ${WAHA_IMAGE:?Set WAHA_IMAGE to an approved pinned image tag or digest}
     restart: unless-stopped
     ports:
       - "127.0.0.1:3001:3000"
     environment:
       WAHA_API_KEY: ${WAHA_API_KEY:?Set a random WAHA_API_KEY}
-      WHATSAPP_DEFAULT_ENGINE: ${WAHA_ENGINE:-WEBJS}
+      WHATSAPP_DEFAULT_ENGINE: ${WAHA_ENGINE:-NOWEB}
+      WHATSAPP_SESSIONS_POSTGRESQL_URL: ${WHATSAPP_SESSIONS_POSTGRESQL_URL:?Run node scripts/setup-waha-storage.mjs first}
+      WAHA_NAMESPACE: modern
+      WAHA_SESSION_NAMESPACE: modern
       WHATSAPP_RESTART_ALL_SESSIONS: "True"
       WAHA_AUTO_START_DELAY_SECONDS: "15"
       WAHA_PRINT_QR: "False"
@@ -21,12 +28,8 @@ services:
       WHATSAPP_HOOK_RETRIES_DELAY_SECONDS: "2"
       WHATSAPP_HOOK_RETRIES_ATTEMPTS: "15"
       TZ: "UTC"
-    volumes:
-      - waha-sessions:/app/.sessions
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
-volumes:
-  waha-sessions:

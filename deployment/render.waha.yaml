@@ -1,0 +1,48 @@
+# Deploy only this Blueprint to Render. No paid disk or paid service is requested.
+# Session data lives in PostgreSQL, not Render's ephemeral local filesystem.
+services:
+  - type: web
+    name: modern-waha
+    runtime: docker
+    plan: free
+    numInstances: 1
+    dockerfilePath: ./deployment/waha.Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: WHATSAPP_DEFAULT_ENGINE
+        value: NOWEB
+      - key: WAHA_NAMESPACE
+        value: modern
+      - key: WAHA_SESSION_NAMESPACE
+        value: modern
+      - key: WHATSAPP_SESSIONS_POSTGRESQL_URL
+        sync: false
+      - key: WAHA_API_KEY
+        sync: false
+      - key: WHATSAPP_HOOK_HMAC_KEY
+        sync: false
+      - key: WHATSAPP_HOOK_URL
+        value: https://modern-alpha-rose.vercel.app/api/webhooks/waha
+      - key: WHATSAPP_HOOK_EVENTS
+        value: session.status,message.ack
+      - key: WHATSAPP_HOOK_RETRIES_POLICY
+        value: exponential
+      - key: WHATSAPP_HOOK_RETRIES_DELAY_SECONDS
+        value: "2"
+      - key: WHATSAPP_HOOK_RETRIES_ATTEMPTS
+        value: "15"
+      - key: WHATSAPP_RESTART_ALL_SESSIONS
+        value: "True"
+      - key: WAHA_AUTO_START_DELAY_SECONDS
+        value: "15"
+      - key: WAHA_PRINT_QR
+        value: "False"
+      - key: WAHA_DASHBOARD_ENABLED
+        value: "False"
+      - key: WHATSAPP_SWAGGER_ENABLED
+        value: "False"
+      - key: WHATSAPP_DOWNLOAD_MEDIA
+        value: "False"

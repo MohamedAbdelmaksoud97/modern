@@ -1,11 +1,21 @@
 # WhatsApp operations
 
+## Current Render deployment
+
+The live provider is maintained in the sibling `../waha` folder and private repository [modern-waha](https://github.com/MohamedAbdelmaksoud97/modern-waha), branch `codex/waha-render`. Render automatically deploys that branch to the Free service [modern-waha](https://dashboard.render.com/web/srv-dbtfvsbbc2fs73f3ecrg). Its cheap public keep-alive route is `https://modern-waha.onrender.com/healthz`; `/api/*` requires the private API key.
+
+Production Vercel settings point to this provider with session `default` and matching API/webhook secrets. Global notifications are enabled; event templates, project visibility and client preferences still apply. Native WAHA tables exist in PostgreSQL and the application client has retrieved a real pairing QR. No phone has been paired and real delivery remains unverified.
+
+The provider repository includes `google-apps-script/Code.gs` and its manifest. Set `WAHA_HEALTH_URL`, `MODERN_CRON_URL` and `CRON_SECRET` in Script Properties, then run `installKeepAlive` once. The resulting ten-minute trigger must be verified in the Google account; source code alone does not schedule it. Keep secrets outside Git.
+
+To pair, open WhatsApp management as a manager, select Start session then Pairing QR, and scan with the office phone. If an unscanned QR expires, Start session now restarts the failed provider session automatically.
+
 The application uses WAHA's server API. No WhatsApp account has been connected and no real messages were sent during implementation. Without a valid `WAHA_URL` and `WAHA_API_KEY`, the manager status API reports `not_configured`. Provider availability and WhatsApp pairing are external prerequisites.
 
 ## Provision and pair
 
-1. Choose and review a pinned WAHA image version/digest. Copy `deployment/waha.env.example` to `deployment/waha.env`, keep it out of source control, and generate independent random API, webhook and cron secrets. The compose file requires actual values and binds the provider port to localhost. The default WEBJS engine supports the free single `default` session; GOWS may require the corresponding WAHA distribution/license.
-2. Run `docker compose --env-file deployment/waha.env -f deployment/compose.waha.yml up -d`. Back up the persistent `waha-sessions` volume securely. Pairing credentials in that volume grant access to the linked WhatsApp account. Disable public dashboard/Swagger access as the supplied compose does.
+1. Choose and review a pinned WAHA image version/digest. Copy `deployment/waha.env.example` to `deployment/waha.env`, keep it out of source control, and generate independent random API, webhook and cron secrets. The compose file requires actual values and binds the provider port to localhost. The deployment uses NOWEB to reduce memory usage for a single office session. Check the pinned release's engine support before upgrading.
+2. Run `npm run whatsapp:storage:setup`, then `docker compose --env-file deployment/waha.env -f deployment/compose.waha.yml up -d --build`. Session data lives in dedicated PostgreSQL databases, so the deployment does not require a persistent Docker or Render disk. Back up those databases securely. Pairing credentials grant access to the linked WhatsApp account. Dashboard/Swagger access remains disabled.
 3. Set `WAHA_URL`, `WAHA_API_KEY`, `WAHA_SESSION`, `WAHA_WEBHOOK_SECRET` and `CRON_SECRET` in the Next.js server environment. Use a private network or HTTPS authenticated reverse proxy if WAHA runs on another host. The browser never receives provider credentials or a configurable provider URL. The loopback bind requires a private tunnel/proxy when the app is on another host.
 4. Set the provider webhook URL to the application's HTTPS `/api/webhooks/waha`. Its HMAC key must equal `WAHA_WEBHOOK_SECRET`. Subscribe to `session.status` and `message.ack`. Global webhook environment settings are supplied in compose; confirm existing sessions inherit those settings or configure their session webhook settings explicitly. The manager start action does not overwrite an existing session's webhook configuration.
 5. A manager who has changed their issued password starts the session, requests its QR code and scans it from WhatsApp's Linked devices on the intended office phone. QR codes expire; request a fresh QR when necessary. The manager status must actually report `WORKING` before dispatch. GET status never creates or starts a session.
@@ -13,6 +23,53 @@ The application uses WAHA's server API. No WhatsApp account has been connected a
 7. Configure a trusted scheduler to call GET or POST `/api/cron/notifications` every minute with `Authorization: Bearer <CRON_SECRET>`. Do not put that secret in a URL/query string. The route authenticates with a timing-safe comparison and processes at most ten messages per run. Configure hosting timeout to at least 120 seconds and HTTPS. Rate limiting is stored in Postgres.
 
 Run `npm run db:migrate` to apply the ordered application migrations. They create the queue and delivery receipt tables inside the private `modern` schema.
+
+## PostgreSQL session persistence
+
+`npm run whatsapp:storage:setup` uses the administrator connection in
+`SUPABASE_DB_URL` to provision the dedicated `modern_waha` login and the
+`waha_modern` / `waha_modern_default` databases. The administrator password is not
+passed to WAHA. The generated `WHATSAPP_SESSIONS_POSTGRESQL_URL` is written only
+to ignored `deployment/waha.env`. Use the session pooler on port 5432; native
+WAHA storage uses multiple databases, session-local state and temporary tables.
+
+The dedicated role owns its WAHA databases and has database-creation permission
+required by WAHA's native session lifecycle. It cannot inherit the office role,
+bypass RLS, manage other roles or read the private `modern` schema. PUBLIC access
+is revoked from the two provisioned databases. Setup verifies a real
+write/disconnect/reconnect/read round trip, removes its own probe table, and
+checks office-data isolation. It does not claim a phone session exists before
+the manager pairs the phone.
+
+WAHA initializes its own tables on first startup. Do not add them to the office
+migration runner or expose them through the browser/Data API. Keep
+`WAHA_NAMESPACE=modern` and `WAHA_SESSION_NAMESPACE=modern` stable after pairing.
+Switching an existing session to another engine requires explicit migration or
+pairing again.
+
+The pinned vendor PostgreSQL URL parser disables certificate verification by
+default. `deployment/waha.Dockerfile` uses a guarded build-time patch to require
+verification, includes the project's CA bundle, and sets `PGSSLMODE=verify-full`
+for downstream engine connections. The image build fails if the expected vendor
+code changes, so an upstream update requires review.
+
+## Render Free deployment
+
+Use `deployment/render.waha.yaml` as the Render Blueprint path. It requests one
+Free web service and no disk or paid database. Fill its three secret fields from
+the privately prepared environment: `WHATSAPP_SESSIONS_POSTGRESQL_URL`,
+`WAHA_API_KEY`, and `WHATSAPP_HOOK_HMAC_KEY` (the latter matches the application's
+`WAHA_WEBHOOK_SECRET`). The callback targets
+`https://modern-alpha-rose.vercel.app/api/webhooks/waha`.
+
+After deployment, configure the resulting HTTPS URL as `WAHA_URL` on Vercel,
+along with matching API/webhook secrets and `WAHA_SESSION=default`, then redeploy
+the application and pair the phone. Google Apps Script keep-alive requests and
+notification-job requests are separate scheduling operations; keep-alive alone
+does not dispatch office notifications. Render Free can restart or suspend, so
+verify reconnect after a Render restart before relying on it. PostgreSQL
+persistence removes dependence on Render's local filesystem, not Free-tier
+availability limits.
 
 ## Queue and privacy behavior
 
