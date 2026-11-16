@@ -218,6 +218,7 @@ export type NotificationPreference = {
 };
 export type PlatformData = {
   user: User;
+  new_inquiries?: number;
   projects: Project[];
   clients: Client[];
   users: User[];

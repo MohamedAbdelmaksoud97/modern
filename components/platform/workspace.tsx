@@ -1,14 +1,13 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { PlatformProvider, usePlatform } from "./provider";
-import { Shell, navigation } from "./shell";
+import dynamic from "next/dynamic";
+import { usePlatform } from "./provider";
+import { navigation } from "./shell";
 import { Dashboard } from "./dashboard";
 import { Projects, ProjectDetail } from "./projects";
 import { Clients, Team } from "./people";
 import { AllDocuments } from "./project-documents";
 import { Finance } from "./project-finance";
-import { OfficeAccounting } from "./office-accounting";
-import { OfficeReports } from "./office-reports";
 import { Tasks } from "./tasks";
 import {
   Inquiries,
@@ -16,9 +15,20 @@ import {
   AuditTrail,
   AccountSettings,
 } from "./administration";
-import { WhatsApp } from "./whatsapp";
 import { NoData } from "./forms";
 import { usePreferences } from "./preferences";
+import { SectionLoading } from "./workspace-frame";
+const OfficeAccounting = dynamic(
+  () => import("./office-accounting").then((m) => m.OfficeAccounting),
+  { loading: SectionLoading },
+);
+const OfficeReports = dynamic(
+  () => import("./office-reports").then((m) => m.OfficeReports),
+  { loading: SectionLoading },
+);
+const WhatsApp = dynamic(() => import("./whatsapp").then((m) => m.WhatsApp), {
+  loading: SectionLoading,
+});
 function Content({ portal }: { portal: boolean }) {
   const { data } = usePlatform(),
     { t } = usePreferences();
@@ -80,11 +90,5 @@ function Content({ portal }: { portal: boolean }) {
   }
 }
 export function Workspace({ portal = false }: { portal?: boolean }) {
-  return (
-    <PlatformProvider>
-      <Shell portal={portal}>
-        <Content portal={portal} />
-      </Shell>
-    </PlatformProvider>
-  );
+  return <Content portal={portal} />;
 }

@@ -171,7 +171,7 @@ function translate(sql, actor) {
     )
     .replace(/\bmodern\./g, "")
     .replace(/\s+FOR (UPDATE|SHARE)( OF [\w,]+)?\s*$/i, "")
-    .replace(/::numeric\(\d+,\d+\)|::text/g, "")
+    .replace(/::numeric\(\d+,\d+\)|::text|::int\b/g, "")
     .replace(
       /now\(\)\+interval '12 hours'/g,
       "strftime('%Y-%m-%dT%H:%M:%fZ','now','+12 hours')",

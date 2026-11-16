@@ -6,15 +6,24 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
-import { LoaderCircle, CheckCircle2, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormDialog, ErrorNotice } from "./forms";
-import type { PlatformData, CommandResult } from "@/lib/types";
+import type { PlatformData, CommandResult, User } from "@/lib/types";
+import {
+  emptyPlatformData,
+  pageScope,
+  scopeKey,
+  type PlatformScope,
+} from "@/lib/platform-scope";
 type Context = {
   data: PlatformData;
+  loading: boolean;
+  error: string | null;
   refresh: () => Promise<void>;
   command: (
     action: string,
@@ -28,50 +37,158 @@ export function usePlatform() {
   if (!value) throw new Error("Platform context missing");
   return value;
 }
-export function PlatformProvider({ children }: { children: ReactNode }) {
+type Snapshot = { data: PlatformData; loadedAt: number };
+const freshnessMs = 30_000;
+
+export function PlatformProvider({
+  children,
+  initialUser,
+}: {
+  children: ReactNode;
+  initialUser: User;
+}) {
   const { t } = usePreferences();
   const router = useRouter();
-  const [data, setData] = useState<PlatformData | null>(null),
-    [error, setError] = useState<string | null>(null),
+  const pathname = usePathname();
+  const scope = pageScope(pathname);
+  const key = scopeKey(scope);
+  const [snapshots, setSnapshots] = useState<Record<string, Snapshot>>({}),
+    [failures, setFailures] = useState<Record<string, string>>({}),
     [notice, setNotice] = useState(""),
     [credentials, setCredentials] = useState<CommandResult["credentials"]>();
-  const refresh = useCallback(async () => {
-    try {
-      const res = await fetch("/api/data", { cache: "no-store" });
-      if (res.status === 401) {
-        router.replace("/login");
-        return;
-      }
-      if (res.status === 403) {
-        const result = await res.json();
-        if (result.code === "PASSWORD_CHANGE_REQUIRED") {
-          router.replace("/change-password");
-          return;
-        }
-        throw new Error("ليست لديك صلاحية الوصول");
-      }
-      if (!res.ok) throw new Error("تعذر تحميل بيانات المكتب. أعد المحاولة.");
-      const json = await res.json();
-      if (json.user.must_change_password) {
-        router.replace("/change-password");
-        return;
-      }
-      setData(json);
-      setError(null);
-    } catch (e) {
-      setError(
-        e instanceof Error &&
-          !(e instanceof TypeError) &&
-          !(e instanceof SyntaxError)
-          ? e.message
-          : "تعذر الاتصال بالخادم",
-      );
-    }
-  }, [router]);
+  const cache = useRef<Record<string, Snapshot>>({});
+  const inFlight = useRef(
+    new Map<string, { controller: AbortController; promise: Promise<void> }>(),
+  );
+  const generation = useRef(0);
+  const currentScope = useRef(scope);
+  const currentKey = useRef(key);
   useEffect(() => {
-    const task = setTimeout(() => void refresh(), 0);
+    currentScope.current = scope;
+    currentKey.current = key;
+  });
+
+  const load = useCallback(
+    (target: PlatformScope, force = false): Promise<void> => {
+      const targetKey = scopeKey(target);
+      if (
+        !force &&
+        Date.now() - (cache.current[targetKey]?.loadedAt ?? 0) < freshnessMs
+      )
+        return Promise.resolve();
+      const existing = inFlight.current.get(targetKey);
+      if (existing) return existing.promise;
+      const controller = new AbortController();
+      const started = generation.current;
+      const query = new URLSearchParams({ section: target.section });
+      if (target.projectId) query.set("project_id", target.projectId);
+      const promise = (async () => {
+        try {
+          const res = await fetch("/api/data?" + query, {
+            cache: "no-store",
+            signal: controller.signal,
+          });
+          if (controller.signal.aborted || generation.current !== started)
+            return;
+          if (res.status === 401) {
+            router.replace("/login");
+            return;
+          }
+          if (res.status === 403) {
+            const result = await res.json();
+            if (result.code === "PASSWORD_CHANGE_REQUIRED") {
+              router.replace("/change-password");
+              return;
+            }
+            throw new Error("ليست لديك صلاحية الوصول");
+          }
+          if (!res.ok)
+            throw new Error("تعذر تحميل بيانات المكتب. أعد المحاولة.");
+          const json = await res.json();
+          if (json.user.must_change_password) {
+            router.replace("/change-password");
+            return;
+          }
+          if (controller.signal.aborted || generation.current !== started)
+            return;
+          if (
+            json.user.id !== initialUser.id ||
+            json.user.role !== initialUser.role
+          ) {
+            cache.current = {};
+            setSnapshots({});
+            setFailures({});
+            router.refresh();
+            return;
+          }
+          const updated = {
+            ...cache.current,
+            [targetKey]: { data: json, loadedAt: Date.now() },
+          };
+          cache.current = updated;
+          setSnapshots(updated);
+          setFailures((prior) => {
+            const remaining = { ...prior };
+            delete remaining[targetKey];
+            return remaining;
+          });
+        } catch (e) {
+          if (controller.signal.aborted || generation.current !== started)
+            return;
+          setFailures((prior) => ({
+            ...prior,
+            [targetKey]:
+              e instanceof Error &&
+              !(e instanceof TypeError) &&
+              !(e instanceof SyntaxError)
+                ? e.message
+                : "تعذر الاتصال بالخادم",
+          }));
+        } finally {
+          if (inFlight.current.get(targetKey)?.controller === controller)
+            inFlight.current.delete(targetKey);
+        }
+      })();
+      inFlight.current.set(targetKey, { controller, promise });
+      return promise;
+    },
+    [router, initialUser.id, initialUser.role],
+  );
+  const refresh = useCallback(() => {
+    generation.current++;
+    for (const pending of inFlight.current.values()) pending.controller.abort();
+    inFlight.current.clear();
+    const current = cache.current[currentKey.current];
+    cache.current = current ? { [currentKey.current]: current } : {};
+    setSnapshots(cache.current);
+    setFailures({});
+    return load(currentScope.current, true);
+  }, [load]);
+  useEffect(() => {
+    const task = setTimeout(() => void load(pageScope(pathname)), 0);
     return () => clearTimeout(task);
-  }, [refresh]);
+  }, [pathname, load]);
+  useEffect(() => {
+    const revalidate = () => {
+      if (document.visibilityState === "visible")
+        void load(currentScope.current);
+    };
+    window.addEventListener("focus", revalidate);
+    document.addEventListener("visibilitychange", revalidate);
+    return () => {
+      window.removeEventListener("focus", revalidate);
+      document.removeEventListener("visibilitychange", revalidate);
+    };
+  }, [load]);
+  useEffect(
+    () => () => {
+      generation.current++;
+      for (const pending of inFlight.current.values())
+        pending.controller.abort();
+      inFlight.current.clear();
+    },
+    [],
+  );
   async function command(
     action: string,
     payload: Record<string, unknown> = {},
@@ -100,24 +217,21 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       };
     }
   }
-  if (!data)
-    return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-5 px-5">
-        <LoaderCircle className="size-8 animate-spin text-link" />
-        <p>{t("جارٍ تحميل مساحة العمل…", "Loading your workspace…")}</p>
-        <div className="w-full max-w-lg">
-          <ErrorNotice error={error} />
-        </div>
-        {error && (
-          <Button onClick={() => void refresh()}>
-            {t("إعادة المحاولة", "Try again")}
-          </Button>
-        )}
-      </main>
-    );
+  const data = snapshots[key]?.data ?? emptyPlatformData(initialUser);
+  const error = failures[key] ?? null;
+  const loading = !snapshots[key];
   return (
-    <PlatformContext value={{ data, refresh, command, notify: setNotice }}>
-      {error && (
+    <PlatformContext
+      value={{
+        data,
+        loading,
+        error: loading ? error : null,
+        refresh,
+        command,
+        notify: setNotice,
+      }}
+    >
+      {error && !loading && (
         <div className="fixed inset-x-4 top-4 z-40">
           <ErrorNotice error={error} />
         </div>

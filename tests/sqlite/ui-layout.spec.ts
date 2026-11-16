@@ -6,6 +6,7 @@ import type { PlatformData } from "../../lib/types";
 let fixture: PlatformData;
 let officeCookies: Awaited<ReturnType<BrowserContext["cookies"]>>;
 let clientCookies: typeof officeCookies;
+let clientUser: PlatformData["user"];
 const projectName =
   "مشروع تصميم فيلا سكنية وإشراف هندسي متكامل في مدينة الكويت";
 const routes = [
@@ -55,7 +56,10 @@ test.beforeAll(async ({ request }) => {
     });
     expect(response.status()).toBe(200);
     const { cookies } = await request.storageState();
-    if (role === "client") clientCookies = cookies;
+    if (role === "client") {
+      clientCookies = cookies;
+      clientUser = (await (await request.get("/api/data")).json()).user;
+    }
     else {
       officeCookies = cookies;
       fixture = await (await request.get("/api/data")).json();
@@ -151,7 +155,7 @@ test.beforeAll(async ({ request }) => {
 
 test.beforeEach(async ({ context }) => {
   await context.addCookies(officeCookies);
-  await context.route("**/api/data", (route) =>
+  await context.route(/\/api\/data(?:\?|$)/, (route) =>
     route.fulfill({ json: fixture }),
   );
 });
@@ -176,6 +180,123 @@ async function noPageOverflow(page: Page) {
     page.url(),
   ).toBeLessThanOrEqual((page.viewportSize()?.width || 0) + 1);
 }
+
+test("navigation keeps its sidebar through slow, failed and out-of-order section loads", async ({ page, context }) => {
+  const calls: string[] = [];
+  let releaseTasks!: () => void;
+  const tasksReady = new Promise<void>((resolve) => { releaseTasks = resolve; });
+  let failFiles = true;
+  await context.route(/\/api\/data(?:\?|$)/, async (route) => {
+    const section = new URL(route.request().url()).searchParams.get("section") ?? "full";
+    calls.push(section);
+    if (section === "tasks") await tasksReady;
+    if (section === "files" && failFiles) {
+      await route.fulfill({ status: 503, json: { ok: false } });
+      return;
+    }
+    await route.fulfill({ json: fixture });
+  });
+  await page.goto("/workspace");
+  await expect(page.locator("#workspace-main h1")).toBeVisible();
+  const sidebar = page.locator("aside");
+  await sidebar.evaluate((node) => node.setAttribute("data-retained", "same-sidebar"));
+  const nav = sidebar.getByRole("navigation");
+  const taskRequest = page.waitForRequest((request) => new URL(request.url()).searchParams.get("section") === "tasks");
+  await nav.getByRole("link", { name: "المهام", exact: true }).click();
+  await taskRequest;
+  await expect(page.locator("#workspace-main").getByRole("status")).toHaveText("جارٍ تحميل القسم…");
+  await expect(sidebar).toHaveAttribute("data-retained", "same-sidebar");
+  await nav.getByRole("link", { name: "العملاء", exact: true }).click();
+  await expect(page.locator("#workspace-main h1:visible")).toHaveText("العملاء");
+  const tasksResponse = page.waitForResponse((response) => new URL(response.url()).searchParams.get("section") === "tasks");
+  releaseTasks();
+  await tasksResponse;
+  await expect(page.locator("#workspace-main h1:visible")).toHaveText("العملاء");
+  await nav.getByRole("link", { name: "المهام", exact: true }).click();
+  await expect(page.locator("#workspace-main h1:visible")).toHaveText("المهام");
+  await expect.poll(() => calls.filter((section) => section === "tasks").length).toBe(1);
+  await nav.getByRole("link", { name: "المستندات", exact: true }).click();
+  await expect(page.locator("#workspace-main").getByRole("alert")).toBeVisible();
+  await expect(sidebar).toHaveAttribute("data-retained", "same-sidebar");
+  failFiles = false;
+  await page.getByRole("button", { name: "إعادة المحاولة", exact: true }).click();
+  await expect(page.locator("#workspace-main h1:visible")).toHaveText("المستندات");
+  await expect(sidebar).toHaveAttribute("data-retained", "same-sidebar");
+  expect(calls).not.toContain("full");
+});
+
+test("section data requests skip unrelated collections and retain server authorization", async ({ page }) => {
+  const r = await page.request.get("/api/data?section=team");
+  expect(r.status()).toBe(200);
+  const team = await r.json() as PlatformData;
+  expect(team.users.length).toBeGreaterThan(0);
+  for (const field of ["projects", "documents", "payments", "reports", "audit", "notifications"] as const)
+    expect(team[field]).toEqual([]);
+  const empty = await page.request.get("/api/data?section=settings");
+  expect(empty.status()).toBe(200);
+  const settings = await empty.json() as PlatformData;
+  expect(settings.user.id).toBe(team.user.id);
+  expect(settings.users).toEqual([]);
+  expect((await page.request.get("/api/data?section=project")).status()).toBe(400);
+});
+
+test("failed requests from an earlier section keep the current error and navigation usable", async ({ page, context }) => {
+  let release!: () => void;
+  const delayed = new Promise<void>((resolve) => { release = resolve; });
+  await context.route(/\/api\/data(?:\?|$)/, async (route) => {
+    const section = new URL(route.request().url()).searchParams.get("section");
+    if (section === "tasks") await delayed;
+    if (section === "tasks" || section === "files") {
+      await route.fulfill({ status: 503, json: { ok: false } });
+      return;
+    }
+    await route.fulfill({ json: fixture });
+  });
+  await page.goto("/workspace");
+  await expect(page.locator("#workspace-main h1:visible")).toBeVisible();
+  const sidebar = page.locator("aside");
+  const requested = page.waitForRequest((r) => new URL(r.url()).searchParams.get("section") === "tasks");
+  await sidebar.getByRole("link", { name: "المهام", exact: true }).click();
+  await requested;
+  await sidebar.getByRole("link", { name: "المستندات", exact: true }).click();
+  await expect(page.locator("#workspace-main").getByRole("alert")).toBeVisible();
+  const response = page.waitForResponse((r) => new URL(r.url()).searchParams.get("section") === "tasks");
+  release();
+  await response;
+  await expect(page.locator("#workspace-main").getByRole("alert")).toBeVisible();
+  await sidebar.getByRole("link", { name: "نظرة عامة", exact: true }).click();
+  await expect(page.locator("#workspace-main h1:visible")).toBeVisible();
+});
+
+test("saving refreshes its section and invalidates cached pages without replacing the sidebar", async ({ page, context }) => {
+  const calls: string[] = [];
+  let saved = false;
+  await context.route(/\/api\/data(?:\?|$)/, (route) => {
+    calls.push(new URL(route.request().url()).searchParams.get("section") ?? "full");
+    return route.fulfill({ json: {
+      ...fixture,
+      inquiries: fixture.inquiries.map((inquiry) => ({ ...inquiry, status: saved ? "contacted" : "new" })),
+    } });
+  });
+  await context.route("**/api/commands", (route) => {
+    saved = true;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/workspace");
+  await expect(page.locator("#workspace-main h1")).toBeVisible();
+  const sidebar = page.locator("aside");
+  await sidebar.evaluate((node) => node.setAttribute("data-retained", "saving"));
+  await sidebar.getByRole("link", { name: /طلبات التواصل/ }).click();
+  await expect(page.locator("#workspace-main h1:visible")).toHaveText("طلبات التواصل");
+  await page.getByRole("combobox", { name: "حالة الطلب" }).click();
+  await page.getByRole("option", { name: "تم التواصل", exact: true }).click();
+  await page.getByRole("button", { name: "تحديث الحالة", exact: true }).click();
+  await expect.poll(() => calls.filter((name) => name === "inquiries").length).toBe(2);
+  await sidebar.getByRole("link", { name: "نظرة عامة", exact: true }).click();
+  await expect(page.locator("#workspace-main h1")).toBeVisible();
+  expect(calls.filter((name) => name === "overview")).toHaveLength(2);
+  await expect(sidebar).toHaveAttribute("data-retained", "saving");
+});
 
 for (const locale of ["ar", "en"] as const) {
   test(`${locale}: search text stays clear of its icon at mobile and desktop widths`, async ({
@@ -392,14 +513,14 @@ test("Tajawal loads on the public site, login, workspace and client portal in bo
       const portal = path.startsWith("/portal");
       await context.clearCookies();
       await context.addCookies(portal ? clientCookies : officeCookies);
-      await context.unroute("**/api/data");
-      await context.route("**/api/data", (route) =>
+      await context.unroute(/\/api\/data(?:\?|$)/);
+      await context.route(/\/api\/data(?:\?|$)/, (route) =>
         route.fulfill({
           json: portal
             ? {
                 ...fixture,
                 user: {
-                  ...fixture.user,
+                  ...clientUser,
                   role: "client",
                   client_id: fixture.clients[0].id,
                 },

@@ -22,7 +22,8 @@ import { type Project } from "@/lib/types";
 import { usePlatform } from "./provider";
 import { usePreferences } from "./preferences";
 import { useLabels } from "./projects";
-import { PortalInvoices } from "./office-accounting";
+import dynamic from "next/dynamic";
+const PortalInvoices = dynamic(() => import("./office-accounting").then((m) => m.PortalInvoices));
 import {
   ActionForm,
   FormDialog,

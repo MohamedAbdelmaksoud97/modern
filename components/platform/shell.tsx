@@ -148,9 +148,9 @@ export function Shell({
             <n.icon className="size-[18px] shrink-0" />
             {t(n.label)}
             {n.key === "inquiries" &&
-              data.inquiries.filter((i) => i.status === "new").length > 0 && (
+              (data.new_inquiries ?? data.inquiries.filter((i) => i.status === "new").length) > 0 && (
                 <span className="ms-auto flex size-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                  {data.inquiries.filter((i) => i.status === "new").length}
+                  {data.new_inquiries ?? data.inquiries.filter((i) => i.status === "new").length}
                 </span>
               )}
           </Link>

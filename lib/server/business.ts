@@ -11,6 +11,7 @@ import {
   type Visibility,
 } from "@/lib/types";
 import { pool, withActor } from "./db";
+import { emptyPlatformData, sectionCollections, type PlatformScope } from "@/lib/platform-scope";
 import { hashPassword, userColumns } from "./auth";
 import {
   AppError,
@@ -110,77 +111,65 @@ async function publishDrawings(c: PoolClient, user: User, projectId: string, sta
     await notify(c, projectId, "document_uploaded", auditId);
   }
 }
-export async function getData(user: User): Promise<PlatformData> {
+export async function getData(user: User, scope?: PlatformScope): Promise<PlatformData> {
   return withActor(user, async (c) => {
-    const projects = (
-      await c.query(
-        "SELECT p.*,modern.project_balance(p.id)::text AS balance,modern.project_paid(p.id)::text AS paid_total,modern.ledger_is_open() AS ledger_open FROM modern.projects p ORDER BY p.created_at DESC",
-      )
-    ).rows;
+    const wanted = scope ? new Set<string>(sectionCollections[scope.section]) : null;
+    if (scope?.section === "overview" && user.role !== "client") wanted?.delete("documents");
+    const projectId = scope?.section === "project" ? scope.projectId : undefined;
+    const projectWhere = (column: string) => projectId ? " WHERE " + column + "=$1" : "";
+    async function rows<K extends Exclude<keyof PlatformData, "user" | "new_inquiries">>(
+      key: K, sql: string, projectScoped = false,
+    ): Promise<PlatformData[K]> {
+      if (wanted && !wanted.has(key)) return [];
+      return (await c.query(sql, projectScoped && projectId ? [projectId] : [])).rows;
+    }
+    const projects = await rows("projects",
+      "SELECT p.*,modern.project_balance(p.id)::text AS balance,modern.project_paid(p.id)::text AS paid_total,modern.ledger_is_open() AS ledger_open FROM modern.projects p" +
+        projectWhere("p.id") + " ORDER BY p.created_at DESC", true,
+    );
     const data = {
+      ...emptyPlatformData(user),
       user,
       projects,
-      clients: (
-        await c.query(
-          "SELECT c.*,u.id AS user_id FROM modern.clients c LEFT JOIN modern.users u ON u.client_id=c.id ORDER BY c.created_at DESC",
-        )
-      ).rows,
-      users: (
-        await c.query(
-          `SELECT ${userColumns} FROM modern.users u ORDER BY u.created_at DESC`,
-        )
-      ).rows,
-      assignments: (
-        await c.query(
-          "SELECT a.*,u.name AS user_name FROM modern.assignments a LEFT JOIN modern.users u ON u.id=a.user_id",
-        )
-      ).rows,
-      documents: (
-        await c.query(
+      clients: await rows("clients",
+        "SELECT c.*,u.id AS user_id FROM modern.clients c LEFT JOIN modern.users u ON u.client_id=c.id" +
+          (projectId ? " WHERE c.id IN (SELECT client_id FROM modern.projects WHERE id=$1)" : "") + " ORDER BY c.created_at DESC", true,
+      ),
+      users: await rows("users", `SELECT ${userColumns} FROM modern.users u ORDER BY u.created_at DESC`),
+      assignments: await rows("assignments",
+        "SELECT a.*,u.name AS user_name FROM modern.assignments a LEFT JOIN modern.users u ON u.id=a.user_id" +
+          projectWhere("a.project_id"), true,
+      ),
+      documents: await rows("documents",
           `SELECT d.id,d.project_id,d.name,d.category,d.mime_type,d.size,d.created_at,d.uploaded_by,d.report_id,
                   d.drawing_id,d.revision_number${user.role === "client" ? "" : ",s.name AS drawing_name,s.published_revision,n.body AS revision_notes"}
            FROM modern.documents d${user.role === "client" ? "" :
              " LEFT JOIN modern.drawing_series s ON s.id=d.drawing_id LEFT JOIN modern.drawing_revision_notes n ON n.document_id=d.id"}
-           ORDER BY d.created_at DESC`,
-        )
-      ).rows,
-      reports: (
-        await c.query("SELECT * FROM modern.reports ORDER BY visit_date DESC")
-      ).rows,
-      quotations: (
-        await c.query("SELECT * FROM modern.quotations ORDER BY version DESC")
-      ).rows,
-      allocations: (
-        await c.query(
-          "SELECT a.*,(a.percentage*p.contract_value/100)::numeric(14,3)::text AS amount FROM modern.allocations a JOIN modern.projects p ON p.id=a.project_id ORDER BY a.stage",
-        )
-      ).rows,
-      payments: (
-        await c.query("SELECT * FROM modern.payments ORDER BY paid_at DESC")
-      ).rows,
-      tasks: (
-        await c.query("SELECT * FROM modern.tasks ORDER BY created_at DESC")
-      ).rows,
-      audit: (
-        await c.query(
-          "SELECT id,actor_name,action,project_id,details,created_at FROM modern.audit ORDER BY created_at DESC LIMIT 300",
-        )
-      ).rows,
-      inquiries: (
-        await c.query("SELECT * FROM modern.inquiries ORDER BY created_at DESC")
-      ).rows,
-      portfolio: (
-        await c.query("SELECT * FROM modern.portfolio ORDER BY created_at DESC")
-      ).rows,
-      notifications: (
-        await c.query(
-          "SELECT id,project_id,client_id,event,body,status,attempts,last_error,created_at FROM modern.notifications ORDER BY created_at DESC LIMIT 200",
-        )
-      ).rows,
-      notification_preferences: (
-        await c.query("SELECT * FROM modern.notification_preferences")
-      ).rows,
+           ${projectWhere("d.project_id")} ORDER BY d.created_at DESC`, true,
+      ),
+      reports: await rows("reports", "SELECT * FROM modern.reports" + projectWhere("project_id") + " ORDER BY visit_date DESC", true),
+      quotations: await rows("quotations", "SELECT * FROM modern.quotations" + projectWhere("project_id") + " ORDER BY version DESC", true),
+      allocations: await rows("allocations",
+        "SELECT a.*,(a.percentage*p.contract_value/100)::numeric(14,3)::text AS amount FROM modern.allocations a JOIN modern.projects p ON p.id=a.project_id" +
+          projectWhere("a.project_id") + " ORDER BY a.stage", true,
+      ),
+      payments: await rows("payments", "SELECT * FROM modern.payments" + projectWhere("project_id") + " ORDER BY paid_at DESC", true),
+      tasks: await rows("tasks", "SELECT * FROM modern.tasks" + projectWhere("project_id") + " ORDER BY created_at DESC", true),
+      audit: await rows("audit",
+        "SELECT id,actor_name,action,project_id,details,created_at FROM modern.audit" + projectWhere("project_id") +
+          " ORDER BY created_at DESC LIMIT 300", true,
+      ),
+      inquiries: await rows("inquiries", "SELECT * FROM modern.inquiries ORDER BY created_at DESC"),
+      portfolio: await rows("portfolio", "SELECT * FROM modern.portfolio ORDER BY created_at DESC"),
+      notifications: await rows("notifications",
+        "SELECT id,project_id,client_id,event,body,status,attempts,last_error,created_at FROM modern.notifications ORDER BY created_at DESC LIMIT 200",
+      ),
+      notification_preferences: await rows("notification_preferences", "SELECT * FROM modern.notification_preferences"),
     } as PlatformData;
+    if (scope && ["manager", "secretary"].includes(user.role))
+      data.new_inquiries = (await c.query<{ total: number }>(
+        "SELECT count(*)::int AS total FROM modern.inquiries WHERE status='new'",
+      )).rows[0].total;
     if (user.role === "client") {
       for (const p of data.projects) {
         Reflect.deleteProperty(p, "rework_started_at");
