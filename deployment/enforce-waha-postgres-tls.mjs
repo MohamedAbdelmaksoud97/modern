@@ -18,4 +18,3 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.argv[2] || "/app/dist/core/storage/psql/PsqlConnectionConfig.js";
   writeFileSync(target, enforcePostgresTls(readFileSync(target, "utf8")));
 }
-
