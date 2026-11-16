@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import {
   Plus,
   Wallet,
@@ -21,6 +22,7 @@ import { type Project } from "@/lib/types";
 import { usePlatform } from "./provider";
 import { usePreferences } from "./preferences";
 import { useLabels } from "./projects";
+import { PortalInvoices } from "./office-accounting";
 import {
   ActionForm,
   FormDialog,
@@ -47,7 +49,7 @@ export function ProjectFinance({
     payments = data.payments.filter((q) => q.project_id === project.id),
     allocations = data.allocations.filter((q) => q.project_id === project.id);
   const total = Number(project.contract_value || 0),
-    paid = payments.reduce((s, p) => s + Number(p.amount), 0);
+    paid = project.paid_total==null?payments.reduce((s,p)=>s+Number(p.amount),0):Number(project.paid_total);
   const canQuote = ["manager", "secretary"].includes(data.user.role),
     canFinance = ["manager", "secretary", "accountant"].includes(
       data.user.role,
@@ -75,12 +77,15 @@ export function ProjectFinance({
                 <Percent data-icon="inline-start" />
                 {t("توزيع النسب", "Allocate percentages")}
               </Button>
-              {canPay && (
+                {canPay && !project.ledger_open && (
                 <Button onClick={() => setModal("payment")}>
                   <Plus data-icon="inline-start" />
                   {t("تسجيل دفعة", "Record payment")}
                 </Button>
               )}
+                {canPay&&project.ledger_open&&<Button nativeButton={false} render={<Link href="/workspace/accounting?tab=documents"/>}>
+                  {t("التحصيل من دفتر المكتب","Collect in office accounting")}
+                </Button>}
             </>
           )}
           <Button
@@ -94,6 +99,7 @@ export function ProjectFinance({
           </Button>
         </div>
       </div>
+      {portal&&project.visibility?.invoices&&<PortalInvoices project={project.id}/>}
       <div className="grid gap-4 md:grid-cols-3">
         {visible("quotation") && (
           <div className="app-panel">

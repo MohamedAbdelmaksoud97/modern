@@ -21,7 +21,7 @@ export async function GET(
     return await withActor(user, async (c) => {
       const document = (
         await c.query(
-          "SELECT d.*,p.visibility FROM modern.documents d JOIN modern.projects p ON p.id=d.project_id WHERE d.id=$1",
+          "SELECT d.name,d.mime_type,d.size,d.content,p.visibility FROM modern.documents d JOIN modern.projects p ON p.id=d.project_id WHERE d.id=$1",
           [id],
         )
       ).rows[0];

@@ -2,11 +2,18 @@
 import { useState } from "react";
 import { Upload, FileText, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { type Project, type Document } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import {
+  drawingCategoriesByStage,
+  stageLabels,
+  type Project,
+  type Document,
+} from "@/lib/types";
 import { usePlatform } from "./provider";
-import { usePreferences } from "./preferences";
+import { englishStages, usePreferences } from "./preferences";
 import {
   ActionForm,
+  AreaField,
   FormDialog,
   SelectField,
   TextField,
@@ -31,10 +38,6 @@ export const categories: Record<string, [string, string]> = {
 };
 const stageCategories: Record<number, string[]> = {
   0: ["contract"],
-  1: ["architecture"],
-  2: ["civil"],
-  3: ["drawings_2d", "drawings_3d"],
-  4: ["municipality"],
   5: ["municipality_letters"],
   6: ["supervision_contract"],
   7: ["site_photos", "site_reports"],
@@ -43,9 +46,11 @@ const stageCategories: Record<number, string[]> = {
 export function DocumentList({
   documents,
   download = true,
+  revisionHistory = false,
 }: {
   documents: Document[];
   download?: boolean;
+  revisionHistory?: boolean;
 }) {
   const { t } = usePreferences();
   return documents.length ? (
@@ -72,6 +77,24 @@ export function DocumentList({
               </p>
             </div>
           </div>
+          {doc.revision_number && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" dir="ltr">
+                v{doc.revision_number}
+              </Badge>
+              {revisionHistory && doc.revision_number === doc.published_revision && (
+                <Badge variant="outline">{t("آخر نسخة مسلّمة", "Latest delivered revision")}</Badge>
+              )}
+              {revisionHistory && doc.revision_number > (doc.published_revision ?? 0) && (
+                <Badge variant="outline">{t("قيد العمل", "Draft")}</Badge>
+              )}
+            </div>
+          )}
+          {revisionHistory && doc.revision_notes && (
+            <p className="whitespace-pre-wrap break-words text-sm" dir="auto">
+              {doc.revision_notes}
+            </p>
+          )}
           <div className="mt-auto flex flex-wrap gap-2">
             <Button
               nativeButton={false}
@@ -113,6 +136,80 @@ export function DocumentList({
     />
   );
 }
+
+function DrawingHistory({
+  drawings,
+  editableCategories,
+  onRevise,
+}: {
+  drawings: Document[];
+  editableCategories: readonly string[];
+  onRevise: (drawing: Document) => void;
+}) {
+  const { t, locale } = usePreferences();
+  const stages = locale === "ar" ? stageLabels : englishStages;
+  const groups = new Map<string, Document[]>();
+  for (const doc of drawings) {
+    if (!doc.drawing_id) continue;
+    const revisions = groups.get(doc.drawing_id);
+    if (revisions) revisions.push(doc);
+    else groups.set(doc.drawing_id, [doc]);
+  }
+  const series = Array.from(groups.values());
+
+  return (
+    <section className="flex flex-col gap-5">
+      <h3 className="text-lg font-medium">{t("سجل التعديلات", "Revision history")}</h3>
+      {Object.entries(drawingCategoriesByStage).map(([stage, kinds]) => {
+        const stageDrawings = series.filter(([doc]) => kinds?.includes(doc.category));
+        if (!stageDrawings.length) return null;
+        return (
+          <section key={stage} className="flex flex-col gap-4">
+            <h4 className="font-medium">{stages[Number(stage)]}</h4>
+            {stageDrawings.map((docs) => {
+              const [latest, ...previous] = docs.sort(
+                (a, b) => (b.revision_number ?? 0) - (a.revision_number ?? 0),
+              );
+              const title = latest.drawing_name || latest.name;
+              const label = title.replace(/\.[^.]+$/, "") || title;
+              return (
+                <article
+                  key={latest.drawing_id}
+                  aria-label={label}
+                  className="flex flex-col gap-3 border p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h5 className="break-words text-sm font-medium" dir="auto">{label}</h5>
+                      <p className="text-xs text-muted-foreground">{t(...categories[latest.category])}</p>
+                    </div>
+                    {editableCategories.includes(latest.category) && (
+                      <Button variant="outline" onClick={() => onRevise(latest)}>
+                        <Upload data-icon="inline-start" />
+                        {t("رفع نسخة جديدة", "Upload revision")}
+                      </Button>
+                    )}
+                  </div>
+                  <DocumentList documents={[latest]} revisionHistory />
+                  {previous.length > 0 && (
+                    <details>
+                      <summary className="w-fit cursor-pointer text-sm text-link">
+                        {t("النسخ السابقة", "Previous revisions")} ({previous.length})
+                      </summary>
+                      <div className="mt-3">
+                        <DocumentList documents={previous} revisionHistory />
+                      </div>
+                    </details>
+                  )}
+                </article>
+              );
+            })}
+          </section>
+        );
+      })}
+    </section>
+  );
+}
 export function ProjectDocuments({
   project,
   portal = false,
@@ -122,8 +219,10 @@ export function ProjectDocuments({
 }) {
   const { data, refresh, notify } = usePlatform(),
     { t } = usePreferences();
-  const [open, setOpen] = useState(false);
+  const [upload, setUpload] = useState<"drawing" | "document" | Document | null>(null);
   const docs = data.documents.filter((d) => d.project_id === project.id);
+  const drawingDocs = portal ? [] : docs.filter((doc) => doc.drawing_id);
+  const otherDocs = portal ? docs : docs.filter((doc) => !doc.drawing_id);
   const roleStage: Record<number, string> = {
     1: "architect",
     2: "civil_engineer",
@@ -141,9 +240,16 @@ export function ProjectDocuments({
             a.stage === project.stage &&
             a.user_id === data.user.id,
         )));
-  const allowed = editable ? stageCategories[project.stage ?? -1] || [] : [];
+  const stage = project.stage ?? -1;
+  const drawingCategories = editable ? drawingCategoriesByStage[stage] ?? [] : [];
+  const allowedDocuments = editable ? stageCategories[stage] ?? [] : [];
   const canReceipts = ["manager", "accountant"].includes(data.user.role);
-  const available = [...allowed, ...(canReceipts ? ["receipts"] : [])];
+  const availableDocuments = [...allowedDocuments, ...(canReceipts ? ["receipts"] : [])];
+  const revisionOf = typeof upload === "object" ? upload : null;
+  const isDrawingUpload = upload === "drawing" || !!revisionOf;
+  const available = isDrawingUpload ? drawingCategories : availableDocuments;
+  const newDrawingLabel = t("رفع مخطط جديد", "Upload new drawing");
+  const documentLabel = t("رفع مستند", "Upload document");
   return (
     <section className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -158,21 +264,34 @@ export function ProjectDocuments({
             )}
           </p>
         </div>
-        {!portal && available.length > 0 && (editable || canReceipts) && (
-          <Button onClick={() => setOpen(true)}>
-            <Upload data-icon="inline-start" />
-            {t("رفع مستند", "Upload document")}
-          </Button>
+        {!portal && (
+          <div className="flex flex-wrap gap-2">
+            {drawingCategories.length > 0 && (
+              <Button onClick={() => setUpload("drawing")}>
+                <Upload data-icon="inline-start" />
+                {newDrawingLabel}
+              </Button>
+            )}
+            {availableDocuments.length > 0 && (
+              <Button variant={drawingCategories.length ? "outline" : "default"} onClick={() => setUpload("document")}>
+                <Upload data-icon="inline-start" />
+                {documentLabel}
+              </Button>
+            )}
+          </div>
         )}
       </div>
-      <DocumentList
-        documents={docs}
-        download={!portal || !!project.visibility?.download}
-      />
+      {drawingDocs.length > 0 && (
+        <DrawingHistory drawings={drawingDocs} editableCategories={drawingCategories} onRevise={setUpload} />
+      )}
+      {(otherDocs.length > 0 || drawingDocs.length === 0) && (
+        <DocumentList documents={otherDocs} download={!portal || !!project.visibility?.download} />
+      )}
       <FormDialog
-        open={open}
-        onOpenChange={setOpen}
-        title={t("رفع مستند", "Upload document")}
+        open={upload !== null}
+        onOpenChange={(open) => { if (!open) setUpload(null); }}
+        title={revisionOf ? t("رفع نسخة جديدة", "Upload revision") :
+          isDrawingUpload ? newDrawingLabel : documentLabel}
         description={t(
           "الحد الأقصى 15 ميجابايت. PDF، صور JPEG وPNG وWebP، وملفات DWG وDXF.",
           "Maximum 15 MB. PDF, JPEG, PNG, WebP, DWG and DXF files.",
@@ -182,6 +301,10 @@ export function ProjectDocuments({
           submitLabel={t("رفع الملف", "Upload file")}
           onSubmit={async (f) => {
             f.set("project_id", project.id);
+            if (revisionOf?.drawing_id) {
+              f.set("drawing_id", revisionOf.drawing_id);
+              f.set("category", revisionOf.category);
+            }
             if (f.get("report_id") === "none") f.delete("report_id");
             const res = await fetch("/api/files", { method: "POST", body: f });
             const json = await res.json();
@@ -191,16 +314,20 @@ export function ProjectDocuments({
             }
             return json;
           }}
-          onSuccess={() => setOpen(false)}
+          onSuccess={() => setUpload(null)}
         >
-          <SelectField
-            label={t("نوع المستند", "Document category")}
-            name="category"
-            options={available.map((c) => ({
-              value: c,
-              label: t(...categories[c]),
-            }))}
-          />
+          {revisionOf ? (
+            <p className="break-words text-sm" dir="auto">{revisionOf.drawing_name || revisionOf.name}</p>
+          ) : (
+            <SelectField
+              label={t("نوع المستند", "Document category")}
+              name="category"
+              options={available.map((c) => ({ value: c, label: t(...categories[c]) }))}
+            />
+          )}
+          {isDrawingUpload && (
+            <AreaField label={t("ملاحظة التعديل", "Revision note")} name="revision_notes" maxLength={4000} required={!!revisionOf} />
+          )}
           {project.stage === 7 &&
             data.reports.some((r) => r.project_id === project.id) && (
               <SelectField

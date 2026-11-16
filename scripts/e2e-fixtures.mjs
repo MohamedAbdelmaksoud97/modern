@@ -244,10 +244,17 @@ export async function cleanupFixtures(fixtureOrFile = defaultFile) {
       [projects, users, "inquiry_received", "inquiry_id", pattern],
     );
     await c.query(
-      "DELETE FROM modern.documents WHERE project_id=ANY($1::uuid[])",
+      `DELETE FROM modern.drawing_revision_notes n USING modern.documents d
+       WHERE n.document_id=d.id AND d.project_id=ANY($1::uuid[])`,
+      [projects],
+    );
+    await c.query(
+      "UPDATE modern.drawing_series SET published_revision=NULL WHERE project_id=ANY($1::uuid[])",
       [projects],
     );
     for (const table of [
+      "documents",
+      "drawing_series",
       "reports",
       "payments",
       "quotations",

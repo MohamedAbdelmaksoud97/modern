@@ -9,6 +9,7 @@ import {
   FolderKanban,
   UsersRound,
   Wallet,
+  ChartNoAxesCombined,
   ClipboardList,
   Files,
   HardHat,
@@ -56,6 +57,8 @@ export const navigation: {
     icon: Wallet,
     roles: finance,
   },
+  { key:"accounting", label:"حسابات المكتب", icon:Wallet, roles:["manager","accountant"] },
+  { key:"reports", label:"تقارير المدير", icon:ChartNoAxesCombined, roles:["manager"] },
   {
     key: "municipality",
     label: "معاملات البلدية",

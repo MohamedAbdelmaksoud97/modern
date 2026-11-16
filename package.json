@@ -13,6 +13,7 @@
     "test": "tsx --test tests/backend*.test.ts",
     "test:whatsapp": "node --conditions=react-server --import tsx --test tests/whatsapp*.test.ts",
     "test:e2e": "playwright test",
+    "test:accounting:e2e": "playwright test --config playwright.accounting.config.ts",
     "test:workflow:sqlite": "node scripts/run-sqlite-workflow.mjs",
     "test:e2e:fixtures": "node scripts/e2e-fixtures.mjs create",
     "test:e2e:cleanup": "node scripts/e2e-fixtures.mjs cleanup",

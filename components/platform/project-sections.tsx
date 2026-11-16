@@ -25,6 +25,7 @@ const englishVisibility: Record<keyof typeof visibilityLabels, string> = {
   payment_schedule: "Payment schedule",
   payments: "Recorded payments",
   balance: "Outstanding balance",
+  invoices: "Issued invoices",
   receipts: "Payment receipts",
   architecture: "Architectural drawings",
   civil: "Civil engineering files",

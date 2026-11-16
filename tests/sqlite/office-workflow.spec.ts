@@ -8,7 +8,7 @@ import {
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
-import { stageLabels, roleLabels } from "../../lib/types";
+import { stageLabels, roleLabels, type Document } from "../../lib/types";
 
 type Account = { email: string; password: string };
 const run = process.env.SQLITE_WORKFLOW_RUN!;
@@ -151,7 +151,8 @@ async function upload(
   report?: string,
 ) {
   await tab(page, "المستندات");
-  await page.getByRole("button", { name: "رفع مستند", exact: true }).click();
+  const drawing = ["الرسومات المعمارية", "الملفات المدنية", "رسومات الواجهات 2D", "رسومات الواجهات 3D", "ملف البلدية والرخصة"].includes(category);
+  await page.getByRole("button", { name: drawing ? "رفع مخطط جديد" : "رفع مستند", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await select(dialog, "نوع المستند", category);
   if (report) await select(dialog, "ربط بتقرير زيارة", new RegExp(report));
@@ -163,6 +164,30 @@ async function upload(
   });
   await dialogSubmit(page, "رفع الملف", "/api/files");
   await expect(page.getByText(name, { exact: true })).toBeVisible();
+}
+
+async function revise(page: Page, drawing: string, name: string, note: string) {
+  const history = page.getByRole("article", { name: drawing, exact: true });
+  await history.getByRole("button", { name: "رفع نسخة جديدة", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const notes = dialog.getByLabel("ملاحظة التعديل", { exact: true });
+  await expect(notes).toHaveAttribute("required", "");
+  await notes.fill(note);
+  await dialog.getByLabel("الملف", { exact: true }).setInputFiles({
+    name,
+    mimeType: "application/pdf",
+    buffer: pdf,
+  });
+  await dialogSubmit(page, "رفع الملف", "/api/files");
+  await expect(history.getByText(name, { exact: true })).toBeVisible();
+  await expect(history.getByText(note, { exact: true })).toBeVisible();
+}
+
+async function projectDocuments(page: Page, path: string): Promise<Document[]> {
+  const response = await page.request.get("/api/data");
+  expect(response.status()).toBe(200);
+  const id = path.split("/").at(-1);
+  return ((await response.json()).documents as Document[]).filter((doc) => doc.project_id === id);
 }
 
 async function advance(page: Page, next: number, blocked = false) {
@@ -404,12 +429,38 @@ test("مدير ينشئ كل الموظفين، وكل موظف يكمل مرح�
     await upload(draftsman, "رسومات الواجهات 2D", "04-facade-2d.pdf");
     await advance(draftsman, 4, true);
     await upload(draftsman, "رسومات الواجهات 3D", "05-facade-3d.pdf");
+    for (const version of [2, 3, 4]) {
+      await revise(draftsman, "04-facade-2d", `facade-${version}.pdf`, `تعديل الواجهة ${version}`);
+    }
+    const facade = draftsman.getByRole("article", { name: "04-facade-2d" });
+    await expect(facade.getByText("v4", { exact: true })).toBeVisible();
+    await facade.getByText(/النسخ السابقة/).click();
+    await expect(facade.getByText("v1", { exact: true })).toBeVisible();
+    await expect(draftsman.getByRole("article", { name: "05-facade-3d" }).getByText("v1", { exact: true })).toBeVisible();
+    await draftsman.evaluate(() => localStorage.setItem("modern_locale", "en"));
+    await draftsman.reload();
+    await tab(draftsman, "Documents");
+    await expect(draftsman.getByRole("heading", { name: "Revision history" })).toBeVisible();
+    await expect(draftsman.getByRole("heading", { name: "Facade drawings" })).toBeVisible();
+    await facade.getByRole("button", { name: "Upload revision" }).click();
+    await expect(draftsman.getByRole("dialog").getByLabel("Revision note")).toBeVisible();
+    await draftsman.keyboard.press("Escape");
+    await draftsman.evaluate(() => localStorage.setItem("modern_locale", "ar"));
+    await draftsman.reload();
     await advance(draftsman, 4);
     await show(municipality, project, 4);
     await upload(municipality, "ملف البلدية والرخصة", "06-municipality.pdf");
     await advance(municipality, 5);
   });
+  const portal = await newActor(browser, baseURL!, client, true);
   await test.step("رفض البلدية وإعادة العمل ثم القبول ورفع عقد الإشراف", async () => {
+    const projectId = project.split("/").at(-1);
+    const visibility = await page.request.post("/api/commands", {
+      data: { action: "set_visibility", project_id: projectId, visibility: { municipality: true } },
+    });
+    expect(visibility.status()).toBe(200);
+    const original = (await projectDocuments(portal, project)).find((doc) => doc.category === "municipality")!;
+    expect(original.revision_number).toBe(1);
     await show(secretary, project, 5);
     await advance(secretary, 6, true);
     await decide(
@@ -420,12 +471,24 @@ test("مدير ينشئ كل الموظفين، وكل موظف يكمل مرح�
     );
     await show(municipality, project, 4);
     await advance(municipality, 5, true);
-    await upload(
-      municipality,
-      "ملف البلدية والرخصة",
-      "07-municipality-revision.pdf",
-    );
+    await tab(municipality, "المستندات");
+    const note = "تم تحديث مرفقات البلدية";
+    await revise(municipality, "06-municipality", "07-municipality-revision.pdf", note);
+    const draft = (await projectDocuments(municipality, project)).find((doc) => doc.name === "07-municipality-revision.pdf")!;
+    expect(draft.revision_number).toBe(2);
+    expect(draft.revision_notes).toBe(note);
+    expect((await projectDocuments(portal, project)).map((doc) => doc.id)).toEqual([original.id]);
+    expect((await portal.request.get(`/api/files/${draft.id}`)).status()).toBe(404);
+    expect((await portal.request.get(`/api/files/${original.id}`)).status()).toBe(200);
     await advance(municipality, 5);
+    const delivered = await projectDocuments(portal, project);
+    expect(delivered.map((doc) => doc.id)).toEqual([draft.id]);
+    expect(delivered[0]).not.toHaveProperty("revision_notes");
+    expect((await portal.request.get(`/api/files/${original.id}?download=1`)).status()).toBe(404);
+    expect((await portal.request.get(`/api/files/${draft.id}`)).status()).toBe(200);
+    expect((await page.request.post("/api/commands", {
+      data: { action: "set_visibility", project_id: projectId, visibility: {} },
+    })).status()).toBe(200);
     await show(secretary, project, 5);
     await decide(secretary, "قبول الطلب", "صدور موافقة البلدية التجريبية");
     await advance(secretary, 6);
@@ -516,7 +579,6 @@ test("مدير ينشئ كل الموظفين، وكل موظف يكمل مرح�
       accountant.getByText("LOCAL-PAY-01", { exact: true }),
     ).toBeVisible();
   });
-  const portal = await newActor(browser, baseURL!, client, true);
   await test.step("المدير يشارك المرحلة والرصيد وملفًا واحدًا والعميل يرى المسموح فقط", async () => {
     await show(page, project, 9);
     await tab(page, "صلاحيات العميل");

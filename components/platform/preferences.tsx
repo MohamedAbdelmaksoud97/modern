@@ -83,6 +83,8 @@ const dictionary: Record<string, string> = {
   المهام: "Tasks",
   المستندات: "Documents",
   "المالية وعروض الأسعار": "Finance & quotations",
+  "حسابات المكتب": "Office accounting",
+  "تقارير المدير": "Management reports",
   "معاملات البلدية": "Municipality",
   "الإشراف الميداني": "Site supervision",
   "فريق العمل": "Team",

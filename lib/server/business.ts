@@ -4,6 +4,7 @@ import type { PoolClient } from "pg";
 import {
   roles,
   visibilityLabels,
+  drawingCategoriesByStage,
   type User,
   type PlatformData,
   type CommandResult,
@@ -79,11 +80,41 @@ async function lockProject(c: PoolClient, projectId: string) {
   if (!rows[0]) throw new AppError("المشروع غير موجود أو غير مصرح", 404);
   return rows[0];
 }
+async function publishDrawings(c: PoolClient, user: User, projectId: string, stage: number) {
+  const categories = drawingCategoriesByStage[stage];
+  if (!categories) return;
+  const { rows } = await c.query<{
+    id: string;
+    drawing_id: string;
+    category: string;
+    revision_number: number;
+  }>(
+    `SELECT d.id,d.drawing_id,d.category,d.revision_number
+     FROM modern.drawing_series s JOIN modern.documents d ON d.drawing_id=s.id
+     WHERE s.project_id=$1 AND s.category IN ($2,$3)
+       AND d.revision_number>coalesce(s.published_revision,0)
+       AND d.revision_number=(SELECT max(r.revision_number) FROM modern.documents r WHERE r.drawing_id=s.id)`,
+    [projectId, categories[0], categories[1] ?? null],
+  );
+  for (const rev of rows) {
+    await c.query("UPDATE modern.drawing_series SET published_revision=$2 WHERE id=$1", [
+      rev.drawing_id,
+      rev.revision_number,
+    ]);
+    const auditId = await audit(c, user, "drawing_published", projectId, {
+      document_id: rev.id,
+      drawing_id: rev.drawing_id,
+      category: rev.category,
+      revision_number: rev.revision_number,
+    });
+    await notify(c, projectId, "document_uploaded", auditId);
+  }
+}
 export async function getData(user: User): Promise<PlatformData> {
   return withActor(user, async (c) => {
     const projects = (
       await c.query(
-        "SELECT p.*,modern.project_balance(p.id)::text AS balance FROM modern.projects p ORDER BY p.created_at DESC",
+        "SELECT p.*,modern.project_balance(p.id)::text AS balance,modern.project_paid(p.id)::text AS paid_total,modern.ledger_is_open() AS ledger_open FROM modern.projects p ORDER BY p.created_at DESC",
       )
     ).rows;
     const data = {
@@ -106,7 +137,11 @@ export async function getData(user: User): Promise<PlatformData> {
       ).rows,
       documents: (
         await c.query(
-          "SELECT id,project_id,name,category,mime_type,size,created_at,uploaded_by,report_id FROM modern.documents ORDER BY created_at DESC",
+          `SELECT d.id,d.project_id,d.name,d.category,d.mime_type,d.size,d.created_at,d.uploaded_by,d.report_id,
+                  d.drawing_id,d.revision_number${user.role === "client" ? "" : ",s.name AS drawing_name,s.published_revision,n.body AS revision_notes"}
+           FROM modern.documents d${user.role === "client" ? "" :
+             " LEFT JOIN modern.drawing_series s ON s.id=d.drawing_id LEFT JOIN modern.drawing_revision_notes n ON n.document_id=d.id"}
+           ORDER BY d.created_at DESC`,
         )
       ).rows,
       reports: (
@@ -159,6 +194,8 @@ export async function getData(user: User): Promise<PlatformData> {
         if (!v.notes) delete p.description;
         if (!v.quotation) delete p.contract_value;
         if (!v.balance) delete p.balance;
+        if (!v.payments) delete p.paid_total;
+        delete p.ledger_open;
         p.due_date = null;
         delete p.municipality_decision;
         delete p.closure_decision;
@@ -202,6 +239,8 @@ export async function getData(user: User): Promise<PlatformData> {
       for (const p of data.projects) {
         delete p.contract_value;
         delete p.balance;
+        delete p.paid_total;
+        delete p.ledger_open;
         delete p.visibility;
       }
     }
@@ -410,6 +449,7 @@ export async function command(
             location: text,
             description: notes,
             due_date: date,
+            inquiry_id: id.optional(),
           })
           .parse(base);
         // The SELECT policy looks up the project by ID. A same-statement
@@ -426,6 +466,14 @@ export async function command(
             p.due_date || null,
           ],
         );
+        if (p.inquiry_id) {
+          const converted = await c.query(
+            "UPDATE modern.inquiries SET converted_project_id=$1,converted_at=clock_timestamp(),status='closed' WHERE id=$2 AND converted_project_id IS NULL",
+            [projectId,p.inquiry_id],
+          );
+          if (!converted.rowCount) throw new AppError("طلب الاستشارة غير موجود أو مرتبط بمشروع بالفعل",409);
+          details = { inquiry_id:p.inquiry_id };
+        }
         resultId = projectId;
         event = "project_created";
         break;
@@ -517,6 +565,7 @@ export async function command(
           if (!reports.rowCount)
             throw new AppError("يلزم تسجيل تقرير زيارة إشراف");
         }
+        await publishDrawings(c, user, p.project_id, project.stage);
         await c.query(
           "UPDATE modern.projects SET stage=stage+1,version=version+1,status=CASE WHEN stage=8 THEN 'completed' ELSE 'active' END WHERE id=$1",
           [p.project_id],
@@ -608,7 +657,7 @@ export async function command(
         const amount = money(milli(p.amount));
         const paid = (
           await c.query(
-            "SELECT coalesce(sum(amount),0)::text AS total FROM modern.payments WHERE project_id=$1",
+            "SELECT modern.project_paid($1)::text AS total",
             [p.project_id],
           )
         ).rows[0].total;
@@ -673,6 +722,8 @@ export async function command(
       }
       case "create_payment": {
         finance(user);
+        if ((await c.query<{open:boolean}>("SELECT modern.ledger_is_open() AS open")).rows[0].open)
+          throw new AppError("سجّل التحصيل من حسابات المكتب");
         const p = z
           .object({
             project_id: id,

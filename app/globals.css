@@ -117,3 +117,35 @@
 @media (min-width: 1024px) { .page-container { width: min(100% - 80px, 1340px); } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 @media print { .no-print, aside, nav { display: none !important; } .workspace-main { margin: 0 !important; } body { background: white; color: black; } }
+.office-print-sheet { display: none; }
+.office-branded-document {
+  color: #211f1a;
+  background: #fff;
+  padding: clamp(12px, 3vw, 28px);
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+.office-branded-document h1 { font-size: 1.45rem; margin-block: 1.2rem .35rem; }
+.office-branded-document h2 { font-size: 1.05rem; margin-block: 1.2rem .35rem; }
+.office-document-header { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: .75rem; border-bottom: 3px solid #c1aa70; font-size: .8rem; }
+.office-document-logo { width: 88px; height: auto; align-self: start; object-fit: contain; }
+.office-document-name { font-size: 1.1rem; font-weight: 700; }
+.office-document-subtitle { font-size: .82rem; color: #534321; margin-bottom: 1rem; }
+.office-document-details { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .55rem 1rem; margin-block: 1rem; }
+.office-document-details dt { font-size: .75rem; color: #534321; }
+.office-document-details dd { font-weight: 600; }
+.office-branded-document table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.office-branded-document th, .office-branded-document td { text-align: start; border-bottom: 1px solid #e8e2d6; padding: .45rem; vertical-align: top; }
+.office-branded-document th, .office-branded-document tfoot { background: #f0e8d2; color: #211f1a; }
+.office-document-note { white-space: pre-wrap; margin-block-start: .75rem; }
+@page { size: A4; margin: 14mm; }
+@media print {
+  body:has(> .office-print-sheet) > :not(.office-print-sheet) { display: none !important; }
+  body:has(> .office-print-sheet) { margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+  .office-print-sheet { display: block; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .office-print-sheet article { padding: 0; width: 100%; }
+  .office-print-sheet thead { display: table-header-group; }
+  .office-print-sheet tbody tr { break-inside: avoid; }
+  .office-print-sheet h1, .office-print-sheet h2 { break-after: avoid; }
+  .office-print-sheet .office-document-header, .office-print-sheet .office-document-details { break-inside: avoid; }
+}

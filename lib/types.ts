@@ -33,6 +33,12 @@ export const stageLabels = [
   "إنهاء الإشراف",
   "مكتمل",
 ];
+export const drawingCategoriesByStage: Readonly<Partial<Record<number, readonly string[]>>> = {
+  1: ["architecture"],
+  2: ["civil"],
+  3: ["drawings_2d", "drawings_3d"],
+  4: ["municipality"],
+};
 export const visibilityLabels = {
   status: "حالة المشروع والمرحلة",
   history: "تاريخ المراحل",
@@ -41,6 +47,7 @@ export const visibilityLabels = {
   payment_schedule: "جدول الدفعات",
   payments: "الدفعات المسددة",
   balance: "المبلغ المتبقي",
+  invoices: "الفواتير المعتمدة",
   receipts: "إيصالات السداد",
   architecture: "الرسومات المعمارية",
   civil: "الملفات المدنية",
@@ -91,6 +98,8 @@ export type Project = {
   due_date: string | null;
   contract_value?: string;
   balance?: string;
+  paid_total?: string | null;
+  ledger_open?: boolean;
   visibility?: Visibility;
   version: number;
   created_at: string;
@@ -114,6 +123,11 @@ export type Document = {
   created_at: string;
   uploaded_by: string;
   report_id?: string | null;
+  drawing_id?: string | null;
+  revision_number?: number | null;
+  drawing_name?: string | null;
+  published_revision?: number | null;
+  revision_notes?: string | null;
 };
 export type Report = {
   id: string;
@@ -167,6 +181,7 @@ export type Audit = {
   created_at: string;
 };
 export type Inquiry = {
+  converted_project_id?: string | null;
   id: string;
   name: string;
   phone: string;

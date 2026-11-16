@@ -437,7 +437,13 @@ export async function dispatchNotifications(
           select a.details->>'category' as category
           from modern.notifications n join modern.audit a on a.id=
             case when n.dedup_key ~ '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' then n.dedup_key::uuid end
-          where n.id=$1 and a.project_id=n.project_id and a.action='document_uploaded'
+          where n.id=$1 and a.project_id=n.project_id and (
+            a.action='document_uploaded' or (a.action='drawing_published' and exists (
+              select 1 from modern.documents d join modern.drawing_series s on s.id=d.drawing_id
+              where d.id=(a.details->>'document_id')::uuid and d.project_id=n.project_id
+                and d.revision_number=s.published_revision
+            ))
+          )
         `,
                 [job.id],
               )

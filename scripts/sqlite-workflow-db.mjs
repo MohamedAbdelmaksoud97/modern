@@ -8,6 +8,7 @@ const isoNow = "strftime('%Y-%m-%dT%H:%M:%fZ','now')";
 const moneyFields = new Set([
   "contract_value",
   "balance",
+  "paid_total",
   "amount",
   "total",
   "percentage",
@@ -18,6 +19,7 @@ const boolFields = new Set([
   "must_change_password",
   "published",
   "enabled",
+  "ledger_open",
 ]);
 const scoped = new Set([
   "clients",
@@ -25,6 +27,8 @@ const scoped = new Set([
   "projects",
   "assignments",
   "documents",
+  "drawing_series",
+  "drawing_revision_notes",
   "reports",
   "quotations",
   "allocations",
@@ -65,7 +69,11 @@ const policies = {
   assignments:
     "can_project(project_id) AND actor_role() NOT IN ('client','accountant')",
   documents:
-    "can_project(project_id) AND (actor_role()<>'client' OR visible(project_id,category)) AND (actor_role()<>'accountant' OR category IN ('receipts','contract','supervision_contract'))",
+    "can_project(project_id) AND (actor_role()<>'client' OR (visible(project_id,category) AND (drawing_id IS NULL OR EXISTS (SELECT 1 FROM main.drawing_series s WHERE s.id=drawing_id AND s.published_revision=revision_number)))) AND (actor_role()<>'accountant' OR category IN ('receipts','contract','supervision_contract'))",
+  drawing_series:
+    "can_project(project_id) AND actor_role()<>'accountant' AND (actor_role()<>'client' OR (published_revision IS NOT NULL AND visible(project_id,category)))",
+  drawing_revision_notes:
+    "actor_role() NOT IN ('client','accountant') AND EXISTS (SELECT 1 FROM scoped_documents d WHERE d.id=document_id)",
   reports:
     "can_project(project_id) AND actor_role()<>'accountant' AND (actor_role()<>'client' OR visible(project_id,'site_reports') OR visible(project_id,'site_notes'))",
   quotations:
@@ -116,6 +124,18 @@ export function initializeFixtureDatabase(
     }
   }
   db.exec("ALTER TABLE projects ADD COLUMN rework_started_at TEXT;");
+  db.exec("ALTER TABLE inquiries ADD COLUMN converted_project_id TEXT;");
+  db.exec("ALTER TABLE inquiries ADD COLUMN converted_at TEXT;");
+  db.exec(`
+    CREATE TABLE drawing_series(
+      id TEXT PRIMARY KEY DEFAULT (${uuid}), project_id TEXT NOT NULL REFERENCES projects(id),
+      category TEXT NOT NULL, name TEXT NOT NULL, published_revision INTEGER
+    );
+    ALTER TABLE documents ADD COLUMN drawing_id TEXT REFERENCES drawing_series(id);
+    ALTER TABLE documents ADD COLUMN revision_number INTEGER;
+    CREATE UNIQUE INDEX drawing_revision_unique ON documents(drawing_id,revision_number);
+    CREATE TABLE drawing_revision_notes(document_id TEXT PRIMARY KEY REFERENCES documents(id), body TEXT NOT NULL);
+  `);
   for (const name of [
     "audit",
     "documents",
@@ -203,6 +223,8 @@ export function createSqlitePool(path) {
   db.function("visible", (id, key) =>
     Number(visible(readProject.get(id), key)),
   );
+  db.function("ledger_is_open", () => 0);
+  db.function("project_paid", (id) => paid.get(id).total);
   db.function("project_balance", (id) => {
     const project = readProject.get(id);
     if (

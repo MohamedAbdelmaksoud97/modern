@@ -7,6 +7,8 @@ import { Projects, ProjectDetail } from "./projects";
 import { Clients, Team } from "./people";
 import { AllDocuments } from "./project-documents";
 import { Finance } from "./project-finance";
+import { OfficeAccounting } from "./office-accounting";
+import { OfficeReports } from "./office-reports";
 import { Tasks } from "./tasks";
 import {
   Inquiries,
@@ -53,6 +55,10 @@ function Content({ portal }: { portal: boolean }) {
       return <AllDocuments portal={portal} />;
     case "finance":
       return <Finance />;
+    case "accounting":
+      return <OfficeAccounting />;
+    case "reports":
+      return <OfficeReports />;
     case "team":
       return <Team />;
     case "municipality":

@@ -68,6 +68,7 @@ export function Projects({
     if (!next && params.has("new")) {
       const query = new URLSearchParams(params.toString());
       query.delete("new");
+      query.delete("inquiry");
       router.replace(pathname + (query.size ? "?" + query.toString() : ""), {
         scroll: false,
       });
@@ -233,7 +234,10 @@ export function Projects({
       )}
       <FormDialog open={open} onOpenChange={setOpen} title={t("مشروع جديد")}>
         <ActionForm
-          onSubmit={(f) => command("create_project", formObject(f))}
+          onSubmit={(f) => command("create_project", {
+            ...formObject(f),
+            inquiry_id: params.get("inquiry") || undefined,
+          })}
           onSuccess={() => setOpen(false)}
         >
           <TextField
@@ -339,7 +343,7 @@ export function ProjectDetail({
     (!portal ||
       Object.entries(p.visibility || {}).some(
         ([k, v]) =>
-          ["quotation", "payment_schedule", "payments", "balance"].includes(
+          ["quotation", "payment_schedule", "payments", "balance", "invoices"].includes(
             k,
           ) && v,
       ));

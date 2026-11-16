@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Plus, Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -68,6 +69,10 @@ export function Inquiries() {
               <p className="my-5 whitespace-pre-wrap text-sm leading-8 text-muted-foreground">
                 {i.message}
               </p>
+              <Link className={buttonVariants({variant:"outline",className:"mb-4"})}
+                href={i.converted_project_id?"/workspace/projects/"+i.converted_project_id:"/workspace/projects?new=1&inquiry="+i.id}>
+                {i.converted_project_id?t("عرض المشروع المرتبط","View linked project"):t("إنشاء مشروع من الطلب","Create linked project")}
+              </Link>
               <ActionForm
                 onSubmit={(f) =>
                   command("update_inquiry", {
@@ -316,6 +321,7 @@ const actionLabels: Record<string, [string, string]> = {
   reset_password: ["إعادة تعيين كلمة مرور", "Password reset"],
   password_changed: ["تغيير كلمة مرور", "Password changed"],
   document_uploaded: ["رفع مستند", "Document uploaded"],
+  drawing_published: ["تسليم نسخة مخطط", "Drawing revision delivered"],
   upload_document: ["رفع مستند", "Document uploaded"],
   municipality_decision: [
     "تسجيل قرار البلدية",

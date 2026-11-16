@@ -4,6 +4,7 @@ import { withActor } from "@/lib/server/db";
 import { audit, notify } from "@/lib/server/business";
 import { apiError, assertSameOrigin, rateLimit } from "@/lib/server/http";
 import { AppError, categories, stageRoles } from "@/lib/server/rules";
+import { drawingCategoriesByStage } from "@/lib/types";
 const categoryStage: Record<string, number> = {
   contract: 0,
   architecture: 1,
@@ -62,6 +63,13 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const projectId = z.string().uuid().parse(form.get("project_id"));
     const category = z.enum(categories).parse(form.get("category"));
+    const existingDrawingId = z.string().uuid().nullable().parse(form.get("drawing_id"));
+    const revisionNotes = z.string().trim().max(4000).parse(form.get("revision_notes") ?? "");
+    const isDrawing = drawingCategoriesByStage[categoryStage[category]]?.includes(category);
+    if (!isDrawing && (existingDrawingId || revisionNotes))
+      throw new AppError("سجل التعديلات متاح للمخططات فقط");
+    if (existingDrawingId && !revisionNotes)
+      throw new AppError("أدخل ملاحظة توضح التعديل في النسخة الجديدة");
     const reportId = z
       .string()
       .uuid()
@@ -129,9 +137,34 @@ export async function POST(request: Request) {
         if (!report || !["site_photos", "site_reports"].includes(category))
           throw new AppError("مرجع التقرير غير صالح");
       }
+      // The project lock serializes numbering, uploads and stage delivery.
+      let drawingId = existingDrawingId;
+      let revision: number | null = null;
+      if (drawingId) {
+        const drawing = (
+          await c.query(
+            `SELECT max(d.revision_number) AS latest_revision
+             FROM modern.drawing_series s JOIN modern.documents d ON d.drawing_id=s.id
+             WHERE s.id=$1 AND s.project_id=$2 AND s.category=$3`,
+            [drawingId, projectId, category],
+          )
+        ).rows[0];
+        if (!drawing?.latest_revision)
+          throw new AppError("المخطط غير موجود في المشروع أو نوع المستند المحدد", 404);
+        revision = drawing.latest_revision + 1;
+      } else if (isDrawing) {
+        drawingId = (
+          await c.query(
+            "INSERT INTO modern.drawing_series(project_id,category,name) VALUES($1,$2,$3) RETURNING id",
+            [projectId, category, name],
+          )
+        ).rows[0].id;
+        revision = 1;
+      }
       const inserted = (
         await c.query(
-          "INSERT INTO modern.documents(project_id,name,category,mime_type,size,content,uploaded_by,report_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id",
+          `INSERT INTO modern.documents(project_id,name,category,mime_type,size,content,uploaded_by,report_id,drawing_id,revision_number,created_at)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,clock_timestamp()) RETURNING id`,
           [
             projectId,
             name,
@@ -141,18 +174,29 @@ export async function POST(request: Request) {
             bytes,
             user.id,
             reportId,
+            drawingId,
+            revision,
           ],
         )
       ).rows[0];
+      if (revisionNotes)
+        await c.query(
+          "INSERT INTO modern.drawing_revision_notes(document_id,body) VALUES($1,$2)",
+          [inserted.id, revisionNotes],
+        );
       const auditId = await audit(c, user, "document_uploaded", projectId, {
         document_id: inserted.id,
         category,
         name,
+        ...(drawingId ? { drawing_id: drawingId, revision_number: revision } : {}),
       });
-      await notify(c, projectId, "document_uploaded", auditId);
-      return inserted;
+      if (!drawingId) await notify(c, projectId, "document_uploaded", auditId);
+      return {
+        id: inserted.id,
+        ...(drawingId ? { drawing_id: drawingId, revision_number: revision } : {}),
+      };
     });
-    return Response.json({ ok: true, id: result.id });
+    return Response.json({ ok: true, ...result });
   } catch (e) {
     return apiError(e);
   }
