@@ -84,7 +84,7 @@ const dictionary: Record<string, string> = {
   المستندات: "Documents",
   "المالية وعروض الأسعار": "Finance & quotations",
   "حسابات المكتب": "Office accounting",
-  "تقارير المدير": "Management reports",
+  "التقارير": "Reports",
   "معاملات البلدية": "Municipality",
   "الإشراف الميداني": "Site supervision",
   "فريق العمل": "Team",

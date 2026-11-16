@@ -332,7 +332,7 @@ export function OfficeAccounting() {
               variant="outline"
               render={<Link href="/workspace/reports" />}
             >
-              {t("تقارير المدير", "Management reports")}
+              {t("التقارير", "Reports")}
             </Button>
           )}
         </div>

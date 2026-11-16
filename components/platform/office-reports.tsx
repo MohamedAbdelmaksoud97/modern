@@ -261,7 +261,7 @@ function ReportWorkspace({
   return (
     <section className="flex flex-col gap-5">
       <h1 className="text-3xl font-medium">
-        {t("تقارير المدير", "Management reports")}
+        {t("التقارير", "Reports")}
       </h1>
       <section className="app-panel">
         <ActionForm

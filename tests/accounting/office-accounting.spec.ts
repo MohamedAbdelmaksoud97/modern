@@ -473,7 +473,7 @@ test("office ledger, invoice privacy, reports and branded print on real Postgres
   await page.setViewportSize({ width: 390, height: 800 });
   await page.goto("/workspace/reports");
   await expect(
-    page.getByRole("heading", { name: "Management reports" }),
+    page.getByRole("heading", { name: "Reports" }),
   ).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
