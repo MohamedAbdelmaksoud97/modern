@@ -14,4 +14,4 @@ Before creating or changing UI, layouts, visual states, or theme tokens, read an
 use [brand-design-system](.agents/skills/brand-design-system/SKILL.md). Its linked
 design specification is authoritative for this project's visual decisions. For
 shadcn components, also use [.agents/skills/shadcn/SKILL.md](.agents/skills/shadcn/SKILL.md)
-for component APIs and composition..
+for component APIs and composition...
