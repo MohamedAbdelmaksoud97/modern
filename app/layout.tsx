@@ -19,7 +19,6 @@ export const metadata: Metadata = {
     "مكتب مودرن للاستشارات الهندسية في الكويت. تصميم الواجهات والتصميم المعماري والإنشائي والأنظمة، التراخيص الحكومية والإشراف الهندسي المتكامل.",
   applicationName: "مودرن",
   robots: { index: true, follow: true },
-  icons: { icon: "/logo.png" },
 };
 
 const arabic = Tajawal({
