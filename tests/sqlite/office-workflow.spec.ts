@@ -426,9 +426,8 @@ test("مدير ينشئ كل الموظفين، وكل موظف يكمل مرح�
     await upload(civil, "الملفات المدنية", "03-civil.pdf");
     await advance(civil, 3);
     await show(draftsman, project, 3);
-    await upload(draftsman, "رسومات الواجهات 2D", "04-facade-2d.pdf");
     await advance(draftsman, 4, true);
-    await upload(draftsman, "رسومات الواجهات 3D", "05-facade-3d.pdf");
+    await upload(draftsman, "رسومات الواجهات 2D", "04-facade-2d.pdf");
     for (const version of [2, 3, 4]) {
       await revise(draftsman, "04-facade-2d", `facade-${version}.pdf`, `تعديل الواجهة ${version}`);
     }
@@ -436,7 +435,6 @@ test("مدير ينشئ كل الموظفين، وكل موظف يكمل مرح�
     await expect(facade.getByText("v4", { exact: true })).toBeVisible();
     await facade.getByText(/النسخ السابقة/).click();
     await expect(facade.getByText("v1", { exact: true })).toBeVisible();
-    await expect(draftsman.getByRole("article", { name: "05-facade-3d" }).getByText("v1", { exact: true })).toBeVisible();
     await draftsman.evaluate(() => localStorage.setItem("modern_locale", "en"));
     await draftsman.reload();
     await tab(draftsman, "Documents");

@@ -8,8 +8,8 @@ import {
   fileDisposition,
 } from "../lib/server/rules";
 test("intake requires its contract before engineering starts", () => {
-  assert.throws(() => checkTransition(0, [], false, null, null));
-  checkTransition(0, ["contract"], false, null, null);
+  assert.throws(() => checkTransition(0, [], false, null, null, "secretary"));
+  checkTransition(0, ["contract"], false, null, null, "secretary");
 });
 test("KWD precision and overpayment", () => {
   assert.equal(milli("1.001"), 1001);
@@ -23,11 +23,23 @@ test("aggregate allocations", () => {
   assert.throws(() => checkAllocations([-1]));
 });
 test("required outputs and decisions cannot be skipped", () => {
-  assert.throws(() => checkTransition(1, [], true, null, null));
-  assert.throws(() => checkTransition(1, ["architecture"], false, null, null));
-  assert.throws(() => checkTransition(5, [], true, "rejected", null));
-  checkTransition(1, ["architecture"], true, null, null);
-  assert.throws(() => checkTransition(8, [], true, null, null));
+  assert.throws(() => checkTransition(1, [], true, null, null, "architect"));
+  assert.throws(() =>
+    checkTransition(1, ["architecture"], false, null, null, "secretary"),
+  );
+  assert.throws(() => checkTransition(5, [], true, "rejected", null, "secretary"));
+  checkTransition(1, ["architecture"], true, null, null, "architect");
+  assert.throws(() => checkTransition(8, [], true, null, null, "secretary"));
+});
+test("manager can deliver an unassigned stage with its required output", () => {
+  assert.throws(() => checkTransition(1, [], false, null, null, "manager"));
+  checkTransition(1, ["architecture"], false, null, null, "manager");
+});
+test("a 2D or 3D facade drawing satisfies the facade output requirement", () => {
+  assert.throws(() => checkTransition(3, [], true, null, null, "draftsman"));
+  checkTransition(3, ["drawings_2d"], true, null, null, "draftsman");
+  checkTransition(3, ["drawings_3d"], true, null, null, "draftsman");
+  checkTransition(3, ["drawings_2d", "drawings_3d"], true, null, null, "draftsman");
 });
 test("three-place allocation decimals survive binary floating point", () => {
   checkAllocations([1.001, 98.999]);

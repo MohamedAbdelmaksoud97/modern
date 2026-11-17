@@ -1,4 +1,4 @@
-import { roles, type Role } from "@/lib/types";
+import { drawingCategoriesByStage, roles, type Role } from "@/lib/types";
 export class AppError extends Error {
   constructor(
     message: string,
@@ -15,12 +15,9 @@ export const stageRoles: Record<number, Role> = {
   4: "municipality_draftsman",
   7: "site_supervisor",
 };
-export const requiredOutputs: Record<number, string[]> = {
+const requiredOutputCategories: Partial<Record<number, readonly string[]>> = {
+  ...drawingCategoriesByStage,
   0: ["contract"],
-  1: ["architecture"],
-  2: ["civil"],
-  3: ["drawings_2d", "drawings_3d"],
-  4: ["municipality"],
   6: ["supervision_contract"],
   7: ["site_reports"],
 };
@@ -96,13 +93,17 @@ export function checkTransition(
   assigned: boolean,
   municipality: string | null,
   closure: string | null,
+  role: Role,
 ) {
   if (stage >= 9) throw new AppError("المشروع مكتمل");
-  if (stageRoles[stage] && !assigned)
+  if (stageRoles[stage] && role !== "manager" && !assigned)
     throw new AppError("يجب تعيين الموظف المسؤول");
-  for (const category of requiredOutputs[stage] ?? [])
-    if (!outputs.includes(category))
-      throw new AppError("الملفات المطلوبة للمرحلة غير مكتملة");
+  const outputCategories = requiredOutputCategories[stage];
+  if (
+    outputCategories &&
+    !outputCategories.some((category) => outputs.includes(category))
+  )
+    throw new AppError("الملفات المطلوبة للمرحلة غير مكتملة");
   if (stage === 5 && municipality !== "approved")
     throw new AppError("يلزم اعتماد البلدية");
   if (stage === 8 && closure !== "approved")

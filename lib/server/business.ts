@@ -521,7 +521,7 @@ export async function command(
         if (project.version !== p.version)
           throw new AppError("تغير المشروع، حدّث الصفحة ثم أعد المحاولة", 409);
         const expectedRole = stageRoles[project.stage];
-        const assignment = expectedRole
+        const assignment = expectedRole && user.role !== "manager"
           ? (
               await c.query(
                 "SELECT a.user_id FROM modern.assignments a JOIN modern.users u ON u.id=a.user_id AND u.active AND u.role=$3 WHERE a.project_id=$1 AND a.stage=$2",
@@ -545,6 +545,7 @@ export async function command(
           !!assignment,
           project.municipality_decision,
           project.closure_decision,
+          user.role,
         );
         if (project.stage === 7) {
           const reports = await c.query(
