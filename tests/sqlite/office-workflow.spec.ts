@@ -8,7 +8,13 @@ import {
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
-import { stageLabels, roleLabels, type Document } from "../../lib/types";
+import { openFixtureDatabase } from "../../scripts/sqlite-workflow-db.mjs";
+import {
+  stageLabels,
+  roleLabels,
+  type Document,
+  type PlatformData,
+} from "../../lib/types";
 
 type Account = { email: string; password: string };
 const run = process.env.SQLITE_WORKFLOW_RUN!;
@@ -646,5 +652,77 @@ test("مدير ينشئ كل الموظفين، وكل موظف يكمل مرح�
       path: join(run, "whatsapp-queue.png"),
       fullPage: true,
     });
+  });
+  await test.step("إغلاق مشروع بدون إشراف بعد اعتماد البلدية", async () => {
+    const dataResponse = await page.request.get("/api/data");
+    expect(dataResponse.ok()).toBe(true);
+    const data: PlatformData = await dataResponse.json();
+    const original = data.projects.find((p) => p.id === project.split("/").at(-1))!;
+    expect(original.completed_without_supervision).toBe(false);
+    const supervisorId = data.users.find((u) => u.role === "site_supervisor")!.id;
+    const created = await page.request.post("/api/commands", {
+      data: {
+        action: "create_project",
+        name: "مشروع تصميم وترخيص فقط",
+        client_id: original.client_id,
+        location: "الكويت",
+      },
+    });
+    expect(created.ok()).toBe(true);
+    const { id } = await created.json();
+    const path = "/workspace/projects/" + id;
+    const db = openFixtureDatabase(join(run, "workflow.sqlite"));
+    try {
+      db.prepare("UPDATE projects SET stage=5 WHERE id=?").run(id);
+    } finally {
+      db.close();
+    }
+    expect((await page.request.post("/api/commands", {
+      data: { action: "assign", project_id: id, stage: 7, user_id: supervisorId },
+    })).ok()).toBe(true);
+
+    await secretary.setViewportSize({ width: 390, height: 844 });
+    await secretary.evaluate(() => localStorage.setItem("modern_theme", "dark"));
+    await secretary.goto(path);
+    await expect(secretary.locator("html")).toHaveClass(/dark/);
+    const label = "إنهاء المشروع بدون إشراف";
+    const close = secretary.getByRole("button", { name: label, exact: true });
+    await expect(close).toHaveCount(0);
+    const beforeApproval = await secretary.request.post("/api/commands", {
+      data: { action: "transition", project_id: id, version: 1, without_supervision: true },
+    });
+    expect(beforeApproval.status()).toBe(400);
+    expect((await beforeApproval.json()).error).toBe("يلزم اعتماد البلدية");
+    await decide(secretary, "قبول الطلب", "صدور موافقة البلدية");
+
+    await page.goto(path);
+    await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
+    await close.focus();
+    await expect(close).toBeFocused();
+    await secretary.keyboard.press("Enter");
+    const dialog = secretary.getByRole("dialog", { name: label });
+    await expect(dialog).toBeVisible();
+    await secretary.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(close).toBeVisible();
+    await close.click();
+    await dialogSubmit(secretary, "تأكيد إنهاء المشروع");
+    await expect(secretary.locator('[data-slot="badge"]').filter({ hasText: /^مكتمل$/ })).toBeVisible();
+    await expect(secretary.getByRole("region", { name: "مراحل المشروع" }).getByText("تم التخطي")).toHaveCount(3);
+    const completed: PlatformData = await (await page.request.get("/api/data")).json();
+    expect(completed.projects.find((p) => p.id === id)).toMatchObject({
+      stage: 9,
+      status: "completed",
+      completed_without_supervision: true,
+      closure_decision: null,
+    });
+    expect(completed.audit).toContainEqual(expect.objectContaining({
+      action: "transition", project_id: id, details: { from: 5, to: 9, without_supervision: true },
+    }));
+    expect(completed.notifications).toContainEqual(expect.objectContaining({
+      event: "project_completed", project_id: id,
+    }));
+    await supervisor.goto(path);
+    await expect(supervisor.getByText("المشروع غير متاح", { exact: true })).toBeVisible();
   });
 });

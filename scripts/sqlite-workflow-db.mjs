@@ -20,6 +20,7 @@ const boolFields = new Set([
   "published",
   "enabled",
   "ledger_open",
+  "completed_without_supervision",
 ]);
 const scoped = new Set([
   "clients",
@@ -124,6 +125,7 @@ export function initializeFixtureDatabase(
     }
   }
   db.exec("ALTER TABLE projects ADD COLUMN rework_started_at TEXT;");
+  db.exec("ALTER TABLE projects ADD COLUMN completed_without_supervision INTEGER NOT NULL DEFAULT 0;");
   db.exec("ALTER TABLE inquiries ADD COLUMN converted_project_id TEXT;");
   db.exec("ALTER TABLE inquiries ADD COLUMN converted_at TEXT;");
   db.exec(`
@@ -211,6 +213,7 @@ export function createSqlitePool(path) {
     return (
       stage != null &&
       stage <= project.stage &&
+      (stage !== 7 || !project.completed_without_supervision) &&
       !!assigned.get(project.id, actor.id, stage)
     );
   }

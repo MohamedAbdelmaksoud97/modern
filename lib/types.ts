@@ -95,6 +95,7 @@ export type Project = {
   description?: string;
   stage?: number;
   status: string;
+  completed_without_supervision?: boolean;
   due_date: string | null;
   contract_value?: string;
   balance?: string;

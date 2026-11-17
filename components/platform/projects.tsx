@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { stageLabels, roleLabels, type Project } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { usePlatform } from "./provider";
 import { usePreferences, englishStages, englishRoles } from "./preferences";
 import {
@@ -295,7 +296,7 @@ export function ProjectDetail({
     { t } = usePreferences(),
     { stages, roles } = useLabels();
   const [edit, setEdit] = useState(false),
-    [advance, setAdvance] = useState(false);
+    [advance, setAdvance] = useState<"next" | "without_supervision" | null>(null);
   const p = data.projects.find((p) => p.id === id);
   if (!p)
     return (
@@ -338,6 +339,9 @@ export function ProjectDetail({
   const assignments = data.assignments.filter((a) => a.project_id === id),
     projectTasks = data.tasks.filter((a) => a.project_id === id),
     history = data.audit.filter((a) => a.project_id === id);
+  const canCompleteWithoutSupervision =
+    !portal && admin && p.stage === 5 && p.municipality_decision === "approved";
+  const completingWithoutSupervision = advance === "without_supervision";
   const showFinance =
     finance &&
     (!portal ||
@@ -388,11 +392,16 @@ export function ProjectDetail({
               {t("تعديل")}
             </Button>
           )}
+          {canCompleteWithoutSupervision && (
+            <Button variant="outline" onClick={() => setAdvance("without_supervision")}>
+              {t("إنهاء المشروع بدون إشراف", "Complete project without supervision")}
+            </Button>
+          )}
           {!portal &&
             (admin || ownsStage) &&
             p.stage !== undefined &&
             p.stage < 9 && (
-              <Button onClick={() => setAdvance(true)}>
+              <Button onClick={() => setAdvance("next")}>
                 {t("تسليم المرحلة", "Complete stage")}
                 <ArrowUpLeft data-icon="inline-end" />
               </Button>
@@ -407,20 +416,40 @@ export function ProjectDetail({
           tabIndex={0}
         >
           <ol className="flex min-w-[920px] justify-between gap-3 px-5">
-            {stages.map((s, i) => (
-              <li key={s} className="flex flex-1 flex-col gap-2">
-                <div
-                  className={`flex size-7 items-center justify-center rounded-full text-[11px] ${i === p.stage ? "bg-primary text-primary-foreground ring-1 ring-input" : i < (p.stage ?? 0) ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}
+            {stages.map((s, i) => {
+              const current = i === p.stage;
+              const skipped = p.completed_without_supervision && i >= 6 && i <= 8;
+              const previouslyReached = i < (p.stage ?? 0) && !skipped;
+              return (
+                <li
+                  key={s}
+                  className="flex flex-1 flex-col gap-2"
+                  aria-current={current ? "step" : undefined}
                 >
-                  {i + 1}
-                </div>
-                <span
-                  className={`max-w-24 text-[10px] leading-5 ${i === p.stage ? "font-medium" : "text-muted-foreground"}`}
-                >
-                  {s}
-                </span>
-              </li>
-            ))}
+                  <div
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-full text-[11px]",
+                      current
+                        ? "bg-primary text-primary-foreground ring-1 ring-input"
+                        : previouslyReached
+                          ? "bg-accent text-accent-foreground"
+                          : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {i + 1}
+                  </div>
+                  <span
+                    className={cn(
+                      "max-w-24 text-[10px] leading-5",
+                      current ? "font-medium" : "text-muted-foreground",
+                    )}
+                  >
+                    {s}
+                    {skipped && <span className="block">{t("تم التخطي", "Skipped")}</span>}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         </div>
       )}
@@ -546,7 +575,10 @@ export function ProjectDetail({
                         className="border-s-2 border-primary ps-4"
                       >
                         <p className="text-sm">
-                          {a.actor_name} · {a.action}
+                          {a.actor_name && `${a.actor_name} · `}
+                          {a.action === "transition" && a.details.without_supervision === true
+                            ? t("إنهاء المشروع بدون إشراف", "Project completed without supervision")
+                            : a.action}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {date(a.created_at)}
@@ -640,32 +672,51 @@ export function ProjectDetail({
         </ActionForm>
       </FormDialog>
       <FormDialog
-        open={advance}
-        onOpenChange={setAdvance}
-        title={t("تسليم المرحلة الحالية", "Complete the current stage")}
-        description={t(
-          "يتم التحقق من المخرجات المطلوبة قبل الانتقال. العملية تُسجل في تاريخ المشروع.",
-          "Required outputs are checked before advancing. This action is recorded in project history.",
-        )}
+        open={advance !== null}
+        onOpenChange={(open) => {
+          if (!open) setAdvance(null);
+        }}
+        title={completingWithoutSupervision
+          ? t("إنهاء المشروع بدون إشراف", "Complete project without supervision")
+          : t("تسليم المرحلة الحالية", "Complete the current stage")}
+        description={completingWithoutSupervision
+          ? t(
+            "سيتحول المشروع إلى مكتمل بعد اعتماد البلدية، مع تخطي مراحل الإشراف.",
+            "The project will be marked complete after municipality approval, skipping the supervision stages.",
+          )
+          : t(
+            "يتم التحقق من المخرجات المطلوبة قبل الانتقال. العملية تُسجل في تاريخ المشروع.",
+            "Required outputs are checked before advancing. This action is recorded in project history.",
+          )}
       >
-        <p className="mb-2 text-sm leading-7">
-          {t("المرحلة الحالية:", "Current stage:")} {stages[p.stage ?? 0]}
-          <br />
-          {t("المرحلة التالية:", "Next stage:")} {stages[(p.stage ?? 0) + 1]}
-        </p>
+        {!completingWithoutSupervision && (
+          <p className="mb-2 text-sm leading-7">
+            {t("المرحلة الحالية:", "Current stage:")} {stages[p.stage ?? 0]}
+            <br />
+            {t("المرحلة التالية:", "Next stage:")} {stages[(p.stage ?? 0) + 1]}
+          </p>
+        )}
         <ActionForm
           onSubmit={() =>
-            command("transition", { project_id: id, version: p.version })
+            command("transition", {
+              project_id: id,
+              version: p.version,
+              without_supervision: completingWithoutSupervision,
+            })
           }
-          onSuccess={() => setAdvance(false)}
-          submitLabel={t("تأكيد التسليم", "Confirm completion")}
+          onSuccess={() => setAdvance(null)}
+          submitLabel={completingWithoutSupervision
+            ? t("تأكيد إنهاء المشروع", "Confirm project completion")
+            : t("تأكيد التسليم", "Confirm completion")}
         >
-          <p className="text-xs text-muted-foreground">
-            {t(
-              "تأكد من رفع مستندات المرحلة وإتمام الموافقات اللازمة.",
-              "Ensure all stage documents are uploaded and required approvals are complete.",
-            )}
-          </p>
+          {!completingWithoutSupervision && (
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "تأكد من رفع مستندات المرحلة وإتمام الموافقات اللازمة.",
+                "Ensure all stage documents are uploaded and required approvals are complete.",
+              )}
+            </p>
+          )}
         </ActionForm>
       </FormDialog>
       {admin && [5, 8].includes(p.stage ?? -1) && (

@@ -176,6 +176,7 @@ export async function getData(user: User, scope?: PlatformScope): Promise<Platfo
         const v = p.visibility ?? {};
         if (!v.status) {
           delete p.stage;
+          delete p.completed_without_supervision;
           p.status = "";
           delete p.municipality_decision;
           delete p.closure_decision;
@@ -209,7 +210,11 @@ export async function getData(user: User, scope?: PlatformScope): Promise<Platfo
         .map((a) => ({
           ...a,
           actor_name: "",
-          details: { from: a.details.from, to: a.details.to },
+          details: {
+            from: a.details.from,
+            to: a.details.to,
+            ...(a.details.without_supervision === true && { without_supervision: true }),
+          },
         }));
       data.tasks = [];
       data.clients = [];
@@ -515,11 +520,20 @@ export async function command(
       }
       case "transition": {
         const p = z
-          .object({ project_id: id, version: z.number().int() })
+          .object({
+            project_id: id,
+            version: z.number().int(),
+            without_supervision: z.boolean().default(false),
+          })
           .parse(base);
         const project = await lockProject(c, p.project_id);
         if (project.version !== p.version)
           throw new AppError("تغير المشروع، حدّث الصفحة ثم أعد المحاولة", 409);
+        if (p.without_supervision) {
+          office(user);
+          if (project.stage !== 5)
+            throw new AppError("إنهاء المشروع بدون إشراف متاح في مرحلة اعتماد البلدية");
+        }
         const expectedRole = stageRoles[project.stage];
         const assignment = expectedRole && user.role !== "manager"
           ? (
@@ -556,13 +570,19 @@ export async function command(
             throw new AppError("يلزم تسجيل تقرير زيارة إشراف");
         }
         await publishDrawings(c, user, p.project_id, project.stage);
+        const nextStage = p.without_supervision ? 9 : project.stage + 1;
+        const completed = nextStage === 9;
         await c.query(
-          "UPDATE modern.projects SET stage=stage+1,version=version+1,status=CASE WHEN stage=8 THEN 'completed' ELSE 'active' END WHERE id=$1",
-          [p.project_id],
+          "UPDATE modern.projects SET stage=$2,version=version+1,status=$3,completed_without_supervision=$4 WHERE id=$1",
+          [p.project_id, nextStage, completed ? "completed" : "active", p.without_supervision],
         );
         projectId = p.project_id;
-        details = { from: project.stage, to: project.stage + 1 };
-        event = project.stage === 8 ? "project_completed" : "stage_changed";
+        details = {
+          from: project.stage,
+          to: nextStage,
+          ...(p.without_supervision && { without_supervision: true }),
+        };
+        event = completed ? "project_completed" : "stage_changed";
         break;
       }
       case "municipality_decision":
